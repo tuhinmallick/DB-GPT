@@ -36,32 +36,17 @@ def tongyi_generate_stream(
         if message.role == ModelMessageRoleType.HUMAN:
             history.append({"role": "user", "content": message.content})
     for message in messages:
-        if (
-            message.role == ModelMessageRoleType.SYSTEM
-            or message.role == ModelMessageRoleType.HUMAN
-        ):
+        if message.role in [
+            ModelMessageRoleType.SYSTEM,
+            ModelMessageRoleType.HUMAN,
+        ]:
             history.append({"role": "user", "content": message.content})
-        # elif message.role == ModelMessageRoleType.HUMAN:
-        #     history.append({"role": "user", "content": message.content})
         elif message.role == ModelMessageRoleType.AI:
             history.append({"role": "assistant", "content": message.content})
-        else:
-            pass
-
     temp_his = history[::-1]
-    last_user_input = None
-    for m in temp_his:
-        if m["role"] == "user":
-            last_user_input = m
-            break
-
+    last_user_input = next((m for m in temp_his if m["role"] == "user"), None)
     temp_his = history
-    prompt_input = None
-    for m in temp_his:
-        if m["role"] == "user":
-            prompt_input = m
-            break
-
+    prompt_input = next((m for m in temp_his if m["role"] == "user"), None)
     if last_user_input and prompt_input and last_user_input != prompt_input:
         history.remove(last_user_input)
         history.remove(prompt_input)
@@ -78,9 +63,6 @@ def tongyi_generate_stream(
 
     for r in res:
         if r:
-            if r["status_code"] == 200:
-                content = r["output"]["choices"][0]["message"].get("content")
-                yield content
-            else:
-                content = r["code"] + ":" + r["message"]
-                yield content
+            yield r["output"]["choices"][0]["message"].get("content") if r[
+                "status_code"
+            ] == 200 else r["code"] + ":" + r["message"]

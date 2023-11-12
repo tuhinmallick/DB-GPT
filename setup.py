@@ -52,9 +52,7 @@ def get_latest_version(package_name: str, index_url: str, default_version: str):
     for line in lines:
         if "Available versions:" in line:
             available_versions = line.split(":")[1].strip()
-            latest_version = available_versions.split(",")[0].strip()
-            return latest_version
-
+            return available_versions.split(",")[0].strip()
     return default_version
 
 
@@ -78,7 +76,7 @@ def cache_package(package_url: str, package_name: str, is_windows: bool = False)
 
     local_path = os.path.join(cache_dir, filename)
     if not os.path.exists(local_path):
-        temp_path = local_path + ".tmp"
+        temp_path = f"{local_path}.tmp"
         if os.path.exists(temp_path):
             os.remove(temp_path)
         try:
@@ -108,10 +106,7 @@ class AVXType(Enum):
 
     @staticmethod
     def of_type(avx: str):
-        for item in AVXType:
-            if item._value_ == avx:
-                return item
-        return None
+        return next((item for item in AVXType if item._value_ == avx), None)
 
 
 class OSType(Enum):
@@ -152,9 +147,6 @@ def get_cpu_avx_support() -> Tuple[OSType, AVXType]:
         cpu_avx = AVXType.AVX512
     elif "avx2" in output.lower():
         cpu_avx = AVXType.AVX2
-    elif "avx " in output.lower():
-        # cpu_avx =  AVXType.AVX
-        pass
     return os_type, env_cpu_avx if env_cpu_avx else cpu_avx
 
 
@@ -181,8 +173,7 @@ def get_cuda_version_from_nvcc():
 def get_cuda_version_from_nvidia_smi():
     try:
         output = subprocess.check_output(["nvidia-smi"]).decode("utf-8")
-        match = re.search(r"CUDA Version:\s+(\d+\.\d+)", output)
-        if match:
+        if match := re.search(r"CUDA Version:\s+(\d+\.\d+)", output):
             return match.group(1)
         else:
             return None
@@ -215,8 +206,7 @@ def torch_requires(
     torch_cuda_pkgs = []
     os_type, _ = get_cpu_avx_support()
     if os_type != OSType.DARWIN:
-        cuda_version = get_cuda_version()
-        if cuda_version:
+        if cuda_version := get_cuda_version():
             supported_versions = ["11.7", "11.8"]
             if cuda_version not in supported_versions:
                 print(
@@ -266,10 +256,7 @@ def llama_cpp_python_cuda_requires():
         )
         return
     cpu_device = ""
-    if cpu_avx == AVXType.AVX2 or cpu_avx == AVXType.AVX512:
-        cpu_device = "avx"
-    else:
-        cpu_device = "basic"
+    cpu_device = "avx" if cpu_avx in [AVXType.AVX2, AVXType.AVX512] else "basic"
     device += cpu_device
     base_url = "https://github.com/jllllll/llama-cpp-python-cuBLAS-wheels/releases/download/textgen-webui"
     llama_cpp_version = "0.2.10"

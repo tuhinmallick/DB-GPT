@@ -66,22 +66,13 @@ def wenxin_generate_stream(
     for message in messages:
         if message.role == ModelMessageRoleType.SYSTEM:
             history.append({"role": "user", "content": message.content})
-        # elif message.role == ModelMessageRoleType.HUMAN:
-        #     history.append({"role": "user", "content": message.content})
         elif message.role == ModelMessageRoleType.AI:
             history.append({"role": "assistant", "content": message.content})
-        else:
-            pass
-
     # temp_his = history[::-1]
     temp_his = history
-    last_user_input = None
-    for m in temp_his:
-        if m["role"] == "user":
-            last_user_input = m
-            break
-
-    if last_user_input:
+    if last_user_input := next(
+        (m for m in temp_his if m["role"] == "user"), None
+    ):
         history.remove(last_user_input)
         history.append(last_user_input)
 
@@ -98,8 +89,7 @@ def wenxin_generate_stream(
     for line in res.iter_lines():
         if line:
             if not line.startswith(b"data: "):
-                error_message = line.decode("utf-8")
-                yield error_message
+                yield line.decode("utf-8")
             else:
                 json_data = line.split(b": ", 1)[1]
                 decoded_line = json_data.decode("utf-8")

@@ -114,5 +114,4 @@ class ClickhouseConnect(RDBMSDatabase):
                 from information_schema.COLUMNS where table_schema=\'{self.get_current_db_name()}\' group by TABLE_NAME; """
 
         cursor = self.session.execute(text(_sql))
-        results = cursor.fetchall()
-        return results
+        return cursor.fetchall()

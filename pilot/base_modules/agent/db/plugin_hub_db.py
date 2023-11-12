@@ -152,8 +152,7 @@ class PluginHubDao(BaseDao[PluginHubEntity]):
         if plugin_id is None:
             raise Exception("plugin_id is None")
         plugin_hubs = session.query(PluginHubEntity)
-        if plugin_id is not None:
-            plugin_hubs = plugin_hubs.filter(PluginHubEntity.id == plugin_id)
+        plugin_hubs = plugin_hubs.filter(PluginHubEntity.id == plugin_id)
         plugin_hubs.delete()
         session.commit()
         session.close()

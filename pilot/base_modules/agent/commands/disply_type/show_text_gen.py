@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
     '"df":"<data frame>"',
 )
 def response_data_text(df: DataFrame) -> str:
-    logger.info(f"response_data_text")
+    logger.info("response_data_text")
     data = df.values
 
     row_size = data.shape[0]
@@ -27,11 +27,8 @@ def response_data_text(df: DataFrame) -> str:
     elif row_size == 1:
         row = data[0]
         for value in row:
-            if value_str:
-                value_str = value_str + f", ** {value} **"
-            else:
-                value_str = f" ** {value} **"
+            value_str = value_str + f", ** {value} **" if value_str else f" ** {value} **"
             text_info = f" {value_str}"
     else:
-        text_info = f"##### _没有找到可用的数据_"
+        text_info = "##### _没有找到可用的数据_"
     return text_info

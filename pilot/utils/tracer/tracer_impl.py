@@ -146,13 +146,10 @@ class TracerManager:
 
     def get_current_span(self) -> Optional[Span]:
         tracer = self._get_tracer()
-        if not tracer:
-            return None
-        return tracer.get_current_span()
+        return None if not tracer else tracer.get_current_span()
 
     def get_current_span_id(self) -> Optional[str]:
-        current_span = self.get_current_span()
-        if current_span:
+        if current_span := self.get_current_span():
             return current_span.span_id
         ctx = self._trace_context_var.get()
         return ctx.span_id if ctx else None
@@ -179,10 +176,7 @@ def trace(operation_name: Optional[str] = None, **trace_kwargs):
             with root_tracer.start_span(name, **trace_kwargs):
                 return await func(*args, **kwargs)
 
-        if asyncio.iscoroutinefunction(func):
-            return async_wrapper
-        else:
-            return sync_wrapper
+        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
     return decorator
 
@@ -192,9 +186,7 @@ def _parse_operation_name(func, *args):
     if inspect.signature(func).parameters.get("self"):
         self_name = args[0].__class__.__name__
     func_name = func.__name__
-    if self_name:
-        return f"{self_name}.{func_name}"
-    return func_name
+    return f"{self_name}.{func_name}" if self_name else func_name
 
 
 def initialize_tracer(

@@ -30,6 +30,6 @@ class ChatFactory(metaclass=Singleton):
                     "get_implementation_of_chat", metadata=metadata
                 ):
                     implementation = cls(**kwargs)
-        if implementation == None:
+        if implementation is None:
             raise Exception(f"Invalid implementation name:{chat_mode}")
         return implementation

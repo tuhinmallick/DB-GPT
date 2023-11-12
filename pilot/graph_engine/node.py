@@ -233,9 +233,7 @@ class BaseNode(BaseComponent):
     def ref_doc_id(self) -> Optional[str]:
         """Deprecated: Get ref doc id."""
         source_node = self.source_node
-        if source_node is None:
-            return None
-        return source_node.node_id
+        return None if source_node is None else source_node.node_id
 
     @property
     def extra_info(self) -> Dict[str, Any]:
@@ -251,11 +249,9 @@ class BaseNode(BaseComponent):
         )
         return f"Node ID: {self.node_id}\n{source_text_wrapped}"
 
-    def truncate_text(text: str, max_length: int) -> str:
+    def truncate_text(self, max_length: int) -> str:
         """Truncate text to a maximum length."""
-        if len(text) <= max_length:
-            return text
-        return text[: max_length - 3] + "..."
+        return self if len(self) <= max_length else f"{self[:max_length - 3]}..."
 
     def get_embedding(self) -> List[float]:
         """Get embedding.
@@ -324,13 +320,12 @@ class TextNode(BaseNode):
 
     def get_content(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> str:
         """Get object content."""
-        metadata_str = self.get_metadata_str(mode=metadata_mode).strip()
-        if not metadata_str:
+        if metadata_str := self.get_metadata_str(mode=metadata_mode).strip():
+            return self.text_template.format(
+                content=self.text, metadata_str=metadata_str
+            ).strip()
+        else:
             return self.text
-
-        return self.text_template.format(
-            content=self.text, metadata_str=metadata_str
-        ).strip()
 
     def get_metadata_str(self, mode: MetadataMode = MetadataMode.ALL) -> str:
         """metadata info string."""
@@ -437,13 +432,12 @@ class NodeWithScore(BaseComponent):
 
     def get_score(self, raise_error: bool = False) -> float:
         """Get score."""
-        if self.score is None:
-            if raise_error:
-                raise ValueError("Score not set.")
-            else:
-                return 0.0
-        else:
+        if self.score is not None:
             return self.score
+        if raise_error:
+            raise ValueError("Score not set.")
+        else:
+            return 0.0
 
     @classmethod
     def class_name(cls) -> str:
@@ -546,11 +540,10 @@ class Document(TextNode):
 
     @classmethod
     def example(cls) -> "Document":
-        document = Document(
+        return Document(
             text="",
             metadata={"filename": "README.md", "category": "codebase"},
         )
-        return document
 
     @classmethod
     def class_name(cls) -> str:

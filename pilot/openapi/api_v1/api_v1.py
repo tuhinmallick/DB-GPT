@@ -62,10 +62,14 @@ global_counter = 0
 
 def __get_conv_user_message(conversations: dict):
     messages = conversations["messages"]
-    for item in messages:
-        if item["type"] == "human":
-            return item["data"]["content"]
-    return ""
+    return next(
+        (
+            item["data"]["content"]
+            for item in messages
+            if item["type"] == "human"
+        ),
+        "",
+    )
 
 
 def __new_conversation(chat_mode, user_id) -> ConversationVo:
@@ -75,16 +79,15 @@ def __new_conversation(chat_mode, user_id) -> ConversationVo:
 
 def get_db_list():
     dbs = CFG.LOCAL_DB_MANAGE.get_db_list()
-    params: dict = {}
-    for item in dbs:
-        params.update({item["db_name"]: item["db_name"]})
+    params: dict = {item["db_name"]: item["db_name"] for item in dbs}
     return params
 
 
 def plugins_select_info():
-    plugins_infos: dict = {}
-    for plugin in CFG.plugins:
-        plugins_infos.update({f"【{plugin._name}】=>{plugin._description}": plugin._name})
+    plugins_infos: dict = {
+        f"【{plugin._name}】=>{plugin._description}": plugin._name
+        for plugin in CFG.plugins
+    }
     return plugins_infos
 
 
@@ -94,42 +97,36 @@ def get_db_list_info():
     for item in dbs:
         comment = item["comment"]
         if comment is not None and len(comment) > 0:
-            params.update({item["db_name"]: comment})
+            params[item["db_name"]] = comment
     return params
 
 
 def knowledge_list_info():
     """return knowledge space list"""
-    params: dict = {}
     request = KnowledgeSpaceRequest()
     spaces = knowledge_service.get_knowledge_space(request)
-    for space in spaces:
-        params.update({space.name: space.desc})
+    params: dict = {space.name: space.desc for space in spaces}
     return params
 
 
 def knowledge_list():
     """return knowledge space list"""
-    params: dict = {}
     request = KnowledgeSpaceRequest()
     spaces = knowledge_service.get_knowledge_space(request)
-    for space in spaces:
-        params.update({space.name: space.name})
+    params: dict = {space.name: space.name for space in spaces}
     return params
 
 
 def get_model_controller() -> BaseModelController:
-    controller = CFG.SYSTEM_APP.get_component(
+    return CFG.SYSTEM_APP.get_component(
         ComponentType.MODEL_CONTROLLER, BaseModelController
     )
-    return controller
 
 
 def get_worker_manager() -> WorkerManager:
-    worker_manager = CFG.SYSTEM_APP.get_component(
+    return CFG.SYSTEM_APP.get_component(
         ComponentType.WORKER_MANAGER_FACTORY, WorkerManagerFactory
     ).create()
-    return worker_manager
 
 
 def get_executor() -> Executor:
@@ -185,11 +182,10 @@ async def db_summary(db_name: str, db_type: str):
 @router.get("/v1/chat/db/support/type", response_model=Result[DbTypeInfo])
 async def db_support_types():
     support_types = CFG.LOCAL_DB_MANAGE.get_all_completed_types()
-    db_type_infos = []
-    for type in support_types:
-        db_type_infos.append(
-            DbTypeInfo(db_type=type.value(), is_file_db=type.is_file_db())
-        )
+    db_type_infos = [
+        DbTypeInfo(db_type=type.value(), is_file_db=type.is_file_db())
+        for type in support_types
+    ]
     return Result[DbTypeInfo].succ(db_type_infos)
 
 
@@ -207,10 +203,7 @@ async def dialogue_list(user_id: str = None):
 
         messages = json.loads(item.get("messages"))
         last_round = max(messages, key=lambda x: x["chat_order"])
-        if "param_value" in last_round:
-            select_param = last_round["param_value"]
-        else:
-            select_param = ""
+        select_param = last_round["param_value"] if "param_value" in last_round else ""
         conv_vo: ConversationVo = ConversationVo(
             conv_uid=conv_uid,
             user_input=summary,
@@ -322,8 +315,7 @@ def get_hist_messages(conv_uid: str):
     history_fac = ChatHistory()
     history_mem = history_fac.get_store_instance(conv_uid)
 
-    history_messages: List[OnceConversation] = history_mem.get_messages()
-    if history_messages:
+    if history_messages := history_mem.get_messages():
         for once in history_messages:
             print(f"once:{once}")
             model_name = once.get("model_name", CFG.LLM_MODEL)
@@ -352,7 +344,7 @@ async def get_chat_instance(dialogue: ConversationVo = Body()) -> BaseChat:
 
     if not ChatScene.is_valid_mode(dialogue.chat_mode):
         raise StopAsyncIteration(
-            Result.failed("Unsupported Chat Mode," + dialogue.chat_mode + "!")
+            Result.failed(f"Unsupported Chat Mode,{dialogue.chat_mode}!")
         )
 
     chat_param = {
@@ -419,7 +411,7 @@ async def chat_completions(dialogue: ConversationVo = Body()):
 
 @router.get("/v1/model/types")
 async def model_types(controller: BaseModelController = Depends(get_model_controller)):
-    logger.info(f"/controller/model/types")
+    logger.info("/controller/model/types")
     try:
         types = set()
         models = await controller.get_all_instances(healthy_only=True)
@@ -435,7 +427,7 @@ async def model_types(controller: BaseModelController = Depends(get_model_contro
 
 @router.get("/v1/model/supports")
 async def model_supports(worker_manager: WorkerManager = Depends(get_worker_manager)):
-    logger.info(f"/controller/model/supports")
+    logger.info("/controller/model/supports")
     try:
         models = await worker_manager.supported_models()
         return Result.succ(FlatSupportedModel.from_supports(models))

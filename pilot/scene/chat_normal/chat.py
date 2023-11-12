@@ -24,8 +24,7 @@ class ChatNormal(BaseChat):
 
     @trace()
     async def generate_input_values(self) -> Dict:
-        input_values = {"input": self.current_user_input}
-        return input_values
+        return {"input": self.current_user_input}
 
     @property
     def chat_type(self) -> str:

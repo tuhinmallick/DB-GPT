@@ -87,6 +87,4 @@ def is_string_valid_json(json_string: str, schema_name: str) -> bool:
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        return super().default(obj)
+        return obj.isoformat() if isinstance(obj, datetime) else super().default(obj)

@@ -205,11 +205,7 @@ class OldLLMModelAdaperWrapper(LLMModelAdaper):
         return self._chat_adapter.get_generate_stream_func(model_path)
 
     def __str__(self) -> str:
-        return "{}({}.{})".format(
-            self.__class__.__name__,
-            self._adapter.__class__.__module__,
-            self._adapter.__class__.__name__,
-        )
+        return f"{self.__class__.__name__}({self._adapter.__class__.__module__}.{self._adapter.__class__.__name__})"
 
 
 class FastChatLLMModelAdaperWrapper(LLMModelAdaper):
@@ -235,11 +231,7 @@ class FastChatLLMModelAdaperWrapper(LLMModelAdaper):
         return self._adapter.get_default_conv_template(model_path)
 
     def __str__(self) -> str:
-        return "{}({}.{})".format(
-            self.__class__.__name__,
-            self._adapter.__class__.__module__,
-            self._adapter.__class__.__name__,
-        )
+        return f"{self.__class__.__name__}({self._adapter.__class__.__module__}.{self._adapter.__class__.__name__})"
 
 
 def get_conv_template(name: str) -> "Conversation":
@@ -448,7 +440,7 @@ class VLLMModelAdaperWrapper(LLMModelAdaper):
         return _auto_get_conv_template(model_name, model_path)
 
     def __str__(self) -> str:
-        return "{}.{}".format(self.__class__.__module__, self.__class__.__name__)
+        return f"{self.__class__.__module__}.{self.__class__.__name__}"
 
 
 # Covering the configuration of fastcaht, we will regularly feedback the code here to fastchat.

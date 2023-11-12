@@ -13,9 +13,8 @@ logger = logging.getLogger(__name__)
     '"df":"<data frame>"',
 )
 def response_table(df: DataFrame) -> str:
-    logger.info(f"response_table")
+    logger.info("response_table")
     html_table = df.to_html(index=False, escape=False, sparsify=False)
     table_str = "".join(html_table.split())
     table_str = table_str.replace("\n", " ")
-    html = f""" \n<div class="w-full overflow-auto">{table_str}</div>\n """
-    return html
+    return f""" \n<div class="w-full overflow-auto">{table_str}</div>\n """

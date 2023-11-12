@@ -170,9 +170,9 @@ def get_or_create_event_loop() -> asyncio.BaseEventLoop:
         assert loop is not None
         return loop
     except RuntimeError as e:
-        if not "no running event loop" in str(e) and not "no current event loop" in str(
+        if "no running event loop" not in str(
             e
-        ):
+        ) and "no current event loop" not in str(e):
             raise e
         logging.warning("Cant not get running event loop, create new event loop now")
     return asyncio.get_event_loop_policy().new_event_loop()
@@ -220,10 +220,8 @@ def setup_http_service_logging(exclude_paths: List[str] = None):
     if not exclude_paths:
         # Not show heartbeat log
         exclude_paths = ["/api/controller/heartbeat"]
-    uvicorn_logger = logging.getLogger("uvicorn.access")
-    if uvicorn_logger:
+    if uvicorn_logger := logging.getLogger("uvicorn.access"):
         for path in exclude_paths:
             uvicorn_logger.addFilter(EndpointFilter(path=path))
-    httpx_logger = logging.getLogger("httpx")
-    if httpx_logger:
+    if httpx_logger := logging.getLogger("httpx"):
         httpx_logger.setLevel(logging.WARNING)

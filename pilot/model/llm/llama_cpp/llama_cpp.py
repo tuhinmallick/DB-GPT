@@ -21,11 +21,10 @@ else:
 
 
 def llama_cpp_lib(prefer_cpu: bool = False):
-    if prefer_cpu or llama_cpp_cuda is None:
-        logger.info(f"Llama.cpp use cpu")
-        return llama_cpp
-    else:
+    if not prefer_cpu and llama_cpp_cuda is not None:
         return llama_cpp_cuda
+    logger.info("Llama.cpp use cpu")
+    return llama_cpp
 
 
 def ban_eos_logits_processor(eos_token, input_ids, logits):
@@ -61,11 +60,11 @@ class LlamaCppModel:
             self.model.__del__()
 
     @classmethod
-    def from_pretrained(self, model_path, model_params: LlamaCppModelParameters):
+    def from_pretrained(cls, model_path, model_params: LlamaCppModelParameters):
         Llama = llama_cpp_lib(prefer_cpu=model_params.prefer_cpu).Llama
         LlamaCache = llama_cpp_lib(prefer_cpu=model_params.prefer_cpu).LlamaCache
 
-        result = self()
+        result = cls()
         cache_capacity = 0
         cache_capacity_str = model_params.cache_capacity
         if cache_capacity_str is not None:
@@ -81,7 +80,7 @@ class LlamaCppModel:
                 cache_capacity = int(cache_capacity_str)
 
         params = get_params(model_path, model_params)
-        logger.info("Cache capacity is " + str(cache_capacity) + " bytes")
+        logger.info(f"Cache capacity is {cache_capacity} bytes")
         logger.info(f"Load LLama model with params: {params}")
 
         result.model = Llama(**params)

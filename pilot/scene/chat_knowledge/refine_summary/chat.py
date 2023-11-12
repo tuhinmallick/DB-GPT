@@ -26,11 +26,10 @@ class ExtractRefineSummary(BaseChat):
         # self.extract_mode = chat_param["select_param"]
 
     def generate_input_values(self):
-        input_values = {
+        return {
             # "context": self.user_input,
             "existing_answer": self.existing_answer,
         }
-        return input_values
 
     @property
     def chat_type(self) -> str:

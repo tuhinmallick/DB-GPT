@@ -20,9 +20,7 @@ class PagenationResult(BaseModel, Generic[T]):
     datas: List[T] = []
 
     def to_dic(self):
-        data_dicts = []
-        for item in self.datas:
-            data_dicts.append(item.__dict__)
+        data_dicts = [item.__dict__ for item in self.datas]
         return {
             "page_index": self.page_index,
             "page_size": self.page_size,

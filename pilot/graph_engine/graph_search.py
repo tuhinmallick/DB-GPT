@@ -111,7 +111,7 @@ class RAGGraphSearch(BaseSearch):
         if self._search_mode != SearchMode.EMBEDDING:
             for keyword in keywords:
                 keyword = keyword.lower()
-                subjs = set((keyword,))
+                subjs = {keyword}
                 # node_ids = self._index_struct.search_node_by_keyword(keyword)
                 # for node_id in node_ids[:GLOBAL_EXPLORE_NODE_LIMIT]:
                 #     if node_id in node_visited:
@@ -141,7 +141,7 @@ class RAGGraphSearch(BaseSearch):
         sorted_nodes_with_scores = []
         if not rel_texts:
             logger.info("> No relationships found, returning nodes found by keywords.")
-            if len(sorted_nodes_with_scores) == 0:
+            if not sorted_nodes_with_scores:
                 logger.info("> No nodes found by keywords, returning empty response.")
             return [Document(page_content="No relationships found.")]
 
@@ -180,11 +180,10 @@ class RAGGraphSearch(BaseSearch):
         sorted_nodes_with_scores.append(
             NodeWithScore(node=rel_text_node, score=DEFAULT_NODE_SCORE)
         )
-        docs = [
+        return [
             Document(page_content=node.text, metadata=node.metadata)
             for node in sorted_nodes_with_scores
         ]
-        return docs
 
     def _get_metadata_for_response(
         self, nodes: List[BaseNode]

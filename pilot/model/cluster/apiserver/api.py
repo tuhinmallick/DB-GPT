@@ -71,23 +71,22 @@ get_bearer_token = HTTPBearer(auto_error=False)
 async def check_api_key(
     auth: Optional[HTTPAuthorizationCredentials] = Depends(get_bearer_token),
 ) -> str:
-    if api_settings.api_keys:
-        if auth is None or (token := auth.credentials) not in api_settings.api_keys:
-            raise HTTPException(
-                status_code=401,
-                detail={
-                    "error": {
-                        "message": "",
-                        "type": "invalid_request_error",
-                        "param": None,
-                        "code": "invalid_api_key",
-                    }
-                },
-            )
-        return token
-    else:
+    if not api_settings.api_keys:
         # api_keys not set; allow all
         return None
+    if auth is None or (token := auth.credentials) not in api_settings.api_keys:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "error": {
+                    "message": "",
+                    "type": "invalid_request_error",
+                    "param": None,
+                    "code": "invalid_api_key",
+                }
+            },
+        )
+    return token
 
 
 class APIServer(BaseComponent):
@@ -102,15 +101,15 @@ class APIServer(BaseComponent):
         Raises:
             APIServerException: If can't get worker manager component instance
         """
-        worker_manager = self.system_app.get_component(
+        if worker_manager := self.system_app.get_component(
             ComponentType.WORKER_MANAGER_FACTORY, WorkerManagerFactory
-        ).create()
-        if not worker_manager:
+        ).create():
+            return worker_manager
+        else:
             raise APIServerException(
                 ErrorCode.INTERNAL_ERROR,
                 f"Could not get component {ComponentType.WORKER_MANAGER_FACTORY} from system_app",
             )
-        return worker_manager
 
     def get_model_registry(self) -> ModelRegistry:
         """Get the model registry component instance
@@ -119,15 +118,15 @@ class APIServer(BaseComponent):
             APIServerException: If can't get model registry component instance
         """
 
-        controller = self.system_app.get_component(
+        if controller := self.system_app.get_component(
             ComponentType.MODEL_REGISTRY, ModelRegistry
-        )
-        if not controller:
+        ):
+            return controller
+        else:
             raise APIServerException(
                 ErrorCode.INTERNAL_ERROR,
                 f"Could not get component {ComponentType.MODEL_REGISTRY} from system_app",
             )
-        return controller
 
     async def get_model_instances_or_raise(
         self, model_name: str
@@ -147,12 +146,11 @@ class APIServer(BaseComponent):
         )
         if not model_instances:
             all_instances = await registry.get_all_model_instances(healthy_only=True)
-            models = [
+            if models := [
                 ins.model_name.split("@llm")[0]
                 for ins in all_instances
                 if ins.model_name.endswith("@llm")
-            ]
-            if models:
+            ]:
                 models = "&&".join(models)
                 message = f"Only {models} allowed now, your model {model_name}"
             else:
@@ -173,18 +171,15 @@ class APIServer(BaseComponent):
         model_name_set = set()
         for inst in model_instances:
             name, worker_type = WorkerType.parse_worker_key(inst.model_name)
-            if worker_type == WorkerType.LLM or worker_type == WorkerType.TEXT2VEC:
+            if worker_type in [WorkerType.LLM, WorkerType.TEXT2VEC]:
                 model_name_set.add(name)
-        models = list(model_name_set)
-        models.sort()
-        # TODO: return real model permission details
-        model_cards = []
-        for m in models:
-            model_cards.append(
-                ModelCard(
-                    id=m, root=m, owned_by="DB-GPT", permission=[ModelPermission()]
-                )
+        models = sorted(model_name_set)
+        model_cards = [
+            ModelCard(
+                id=m, root=m, owned_by="DB-GPT", permission=[ModelPermission()]
             )
+            for m in models
+        ]
         return ModelList(data=model_cards)
 
     async def chat_completion_stream_generator(
@@ -259,7 +254,7 @@ class APIServer(BaseComponent):
         worker_manager: WorkerManager = self.get_worker_manager()
         choices = []
         chat_completions = []
-        for i in range(n):
+        for _ in range(n):
             model_output = asyncio.create_task(worker_manager.generate(params))
             chat_completions.append(model_output)
         try:

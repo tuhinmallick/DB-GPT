@@ -34,10 +34,7 @@ class AVXType(Enum):
 
     @staticmethod
     def of_type(avx: str):
-        for item in AVXType:
-            if item._value_ == avx:
-                return item
-        return None
+        return next((item for item in AVXType if item._value_ == avx), None)
 
 
 class OSType(str, Enum):
@@ -56,7 +53,7 @@ def get_cpu_avx_support() -> Tuple[OSType, AVXType, str]:
     if "windows" in system.lower():
         os_type = OSType.WINDOWS
         output = "avx2"
-        distribution = "Windows " + platform.release()
+        distribution = f"Windows {platform.release()}"
         print("Current platform is windows, use avx2 as default cpu architecture")
     elif system == "Linux":
         os_type = OSType.LINUX
@@ -70,7 +67,7 @@ def get_cpu_avx_support() -> Tuple[OSType, AVXType, str]:
         result = subprocess.run(
             ["sysctl", "-a"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
-        distribution = "Mac OS " + platform.mac_ver()[0]
+        distribution = f"Mac OS {platform.mac_ver()[0]}"
         output = result.stdout.decode()
     else:
         os_type = OSType.OTHER
@@ -81,9 +78,6 @@ def get_cpu_avx_support() -> Tuple[OSType, AVXType, str]:
         cpu_avx = AVXType.AVX512
     elif "avx2" in output.lower():
         cpu_avx = AVXType.AVX2
-    elif "avx " in output.lower():
-        # cpu_avx =  AVXType.AVX
-        pass
     return os_type, env_cpu_avx if env_cpu_avx else cpu_avx, distribution
 
 
@@ -156,8 +150,7 @@ def get_cuda_version_from_nvcc():
 def get_cuda_version_from_nvidia_smi():
     try:
         output = subprocess.check_output(["nvidia-smi"]).decode("utf-8")
-        match = re.search(r"CUDA Version:\s+(\d+\.\d+)", output)
-        if match:
+        if match := re.search(r"CUDA Version:\s+(\d+\.\d+)", output):
             return match.group(1)
         else:
             return None
@@ -186,11 +179,9 @@ def get_cpu_info():
     if os_type == OSType.LINUX:
         try:
             output = subprocess.check_output(["lscpu"]).decode("utf-8")
-            match = re.search(r".*Model name:\s*(.+)", output)
-            if match:
+            if match := re.search(r".*Model name:\s*(.+)", output):
                 cpu_info = match.group(1).strip()
-            match = re.search(f".*型号名称：\s*(.+)", output)
-            if match:
+            if match := re.search(f".*型号名称：\s*(.+)", output):
                 cpu_info = match.group(1).strip()
         except:
             pass
@@ -199,8 +190,7 @@ def get_cpu_info():
             output = subprocess.check_output(
                 ["sysctl", "machdep.cpu.brand_string"]
             ).decode("utf-8")
-            match = re.search(r"machdep.cpu.brand_string:\s*(.+)", output)
-            if match:
+            if match := re.search(r"machdep.cpu.brand_string:\s*(.+)", output):
                 cpu_info = match.group(1).strip()
         except:
             pass

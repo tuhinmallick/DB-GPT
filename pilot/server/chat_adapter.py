@@ -247,7 +247,7 @@ class LlamaCppChatAdapter(BaseChatAdpter):
     def match(self, model_path: str):
         from pilot.model.adapter import LlamaCppAdapater
 
-        if "llama-cpp" == model_path:
+        if model_path == "llama-cpp":
             return True
         is_match, _ = LlamaCppAdapater._parse_model_path(model_path)
         return is_match

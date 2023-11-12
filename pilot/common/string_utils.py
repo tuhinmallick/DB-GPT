@@ -28,10 +28,7 @@ def is_scientific_notation(string):
     # 使用正则表达式匹配字符串
     match = re.match(pattern, str(string))
     # 判断是否匹配成功
-    if match is not None:
-        return True
-    else:
-        return False
+    return match is not None
 
 
 def extract_content(long_string, s1, s2, is_include: bool = False):
@@ -58,11 +55,10 @@ def extract_content_open_ending(long_string, s1, s2, is_include: bool = False):
     while start_index != -1:
         if long_string.find(s2, start_index) <= 0:
             end_index = len(long_string)
+        elif is_include:
+            end_index = long_string.find(s2, start_index + len(s1) + 1)
         else:
-            if is_include:
-                end_index = long_string.find(s2, start_index + len(s1) + 1)
-            else:
-                end_index = long_string.find(s2, start_index + len(s1))
+            end_index = long_string.find(s2, start_index + len(s1))
         if is_include:
             extracted_content = long_string[start_index : end_index + len(s2)]
         else:

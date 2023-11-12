@@ -114,10 +114,7 @@ async def my_agents(user: str = None):
     logger.info(f"my_agents:{user}")
     agent_hub = AgentHub(PLUGINS_DIR)
     agents = agent_hub.get_my_plugin(user)
-    agent_dicts = []
-    for agent in agents:
-        agent_dicts.append(agent.__dict__)
-
+    agent_dicts = [agent.__dict__ for agent in agents]
     return Result.succ(agent_dicts)
 
 

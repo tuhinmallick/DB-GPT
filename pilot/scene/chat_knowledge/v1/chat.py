@@ -73,8 +73,7 @@ class ChatKnowledge(BaseChat):
         last_output = None
         async for output in super().stream_call():
             last_output = output
-            yield output
-
+            yield last_output
         if (
             CFG.KNOWLEDGE_CHAT_SHOW_RELATIONS
             and last_output
@@ -86,12 +85,11 @@ class ChatKnowledge(BaseChat):
                 last_output.text + "\n\nrelations:\n\n" + ",".join(relations)
             )
         reference = f"\n\n{self.parse_source_view(self.sources)}"
-        last_output = last_output + reference
-        yield last_output
+        yield last_output + reference
 
     def knowledge_reference_call(self, text):
         """return reference"""
-        return text + f"\n\n{self.parse_source_view(self.sources)}"
+        return f"{text}\n\n{self.parse_source_view(self.sources)}"
 
     @trace()
     async def generate_input_values(self) -> Dict:
@@ -118,14 +116,13 @@ class ChatKnowledge(BaseChat):
             context = [d.page_content for d in docs]
         context = context[: self.max_token]
         relations = list(
-            set([os.path.basename(str(d.metadata.get("source", ""))) for d in docs])
+            {os.path.basename(str(d.metadata.get("source", ""))) for d in docs}
         )
-        input_values = {
+        return {
             "context": context,
             "question": self.current_user_input,
             "relations": relations,
         }
-        return input_values
 
     def parse_source_view(self, sources: List):
         """
@@ -140,17 +137,13 @@ class ChatKnowledge(BaseChat):
         """
         references = {"title": "References", "references": []}
         for item in sources:
-            reference = {}
             source = item["source"] if "source" in item else ""
-            reference["name"] = source
+            reference = {"name": source}
             pages = item["pages"] if "pages" in item else []
             if len(pages) > 0:
                 reference["pages"] = pages
             references["references"].append(reference)
-        html = (
-            f"""<references>{json.dumps(references, ensure_ascii=False)}</references>"""
-        )
-        return html
+        return f"""<references>{json.dumps(references, ensure_ascii=False)}</references>"""
 
     def merge_by_key(self, data, key):
         result = {}
@@ -164,14 +157,13 @@ class ChatKnowledge(BaseChat):
                         result[item_key]["pages"],
                         str(item["page"]),
                     ]
+            elif "page" in item:
+                result[item_key] = {
+                    "source": item_key,
+                    "pages": [str(item["page"])],
+                }
             else:
-                if "page" in item:
-                    result[item_key] = {
-                        "source": item_key,
-                        "pages": [str(item["page"])],
-                    }
-                else:
-                    result[item_key] = {"source": item_key}
+                result[item_key] = {"source": item_key}
         return list(result.values())
 
     @property

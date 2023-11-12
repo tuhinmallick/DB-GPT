@@ -14,13 +14,13 @@ def deep_quotes(token, column_names=[]):
     if hasattr(token, "tokens"):
         for token_child in token.tokens:
             deep_quotes(token_child, column_names)
-    else:
+    elif (
+        len(column_names) > 0
+        and token.value in column_names
+        or len(column_names) <= 0
+    ):
         if token.ttype == sqlparse.tokens.Name:
-            if len(column_names) > 0:
-                if token.value in column_names:
-                    token.value = f'"{token.value}"'
-            else:
-                token.value = f'"{token.value}"'
+            token.value = f'"{token.value}"'
 
 
 if __name__ == "__main__":

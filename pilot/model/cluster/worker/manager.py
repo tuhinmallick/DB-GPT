@@ -122,32 +122,33 @@ class LocalWorkerManager(WorkerManager):
             listener(self)
 
     async def stop(self, ignore_exception: bool = False):
-        if not self.run_data.stop_event.is_set():
-            logger.info("Stop all workers")
-            self.run_data.stop_event.clear()
-            stop_tasks = []
-            stop_tasks.append(
-                self._stop_all_worker(apply_req=None, ignore_exception=ignore_exception)
-            )
-            if self.deregister_func:
-                # If ignore_exception is True, use exception handling to ignore any exceptions raised from self.deregister_func
-                if ignore_exception:
+        if self.run_data.stop_event.is_set():
+            return
+        logger.info("Stop all workers")
+        self.run_data.stop_event.clear()
+        stop_tasks = []
+        stop_tasks.append(
+            self._stop_all_worker(apply_req=None, ignore_exception=ignore_exception)
+        )
+        if self.deregister_func:
+            # If ignore_exception is True, use exception handling to ignore any exceptions raised from self.deregister_func
+            if ignore_exception:
 
-                    async def safe_deregister_func(run_data):
-                        try:
-                            await self.deregister_func(run_data)
-                        except Exception as e:
-                            logger.warning(
-                                f"Stop worker, ignored exception from deregister_func: {e}"
-                            )
+                async def safe_deregister_func(run_data):
+                    try:
+                        await self.deregister_func(run_data)
+                    except Exception as e:
+                        logger.warning(
+                            f"Stop worker, ignored exception from deregister_func: {e}"
+                        )
 
-                    stop_tasks.append(safe_deregister_func(self.run_data))
-                else:
-                    stop_tasks.append(self.deregister_func(self.run_data))
+                stop_tasks.append(safe_deregister_func(self.run_data))
+            else:
+                stop_tasks.append(self.deregister_func(self.run_data))
 
-            results = await asyncio.gather(*stop_tasks)
-            if not results[0].success and not ignore_exception:
-                raise Exception(results[0].message)
+        results = await asyncio.gather(*stop_tasks)
+        if not results[0].success and not ignore_exception:
+            raise Exception(results[0].message)
 
     def after_start(self, listener: Callable[["WorkerManager"], None]):
         self.start_listeners.append(listener)
@@ -201,8 +202,7 @@ class LocalWorkerManager(WorkerManager):
         worker_key = self._worker_key(
             worker_params.worker_type, worker_params.model_name
         )
-        instances = self.workers.get(worker_key)
-        if instances:
+        if instances := self.workers.get(worker_key):
             del self.workers[worker_key]
 
     async def model_startup(self, startup_req: WorkerStartupRequest):
@@ -281,8 +281,7 @@ class LocalWorkerManager(WorkerManager):
             raise Exception(
                 f"Cound not found worker instances for model name {model_name} and worker type {worker_type}"
             )
-        worker_run_data = random.choice(worker_instances)
-        return worker_run_data
+        return random.choice(worker_instances)
 
     async def select_one_instance(
         self, worker_type: str, model_name: str, healthy_only: bool = True
@@ -301,16 +300,16 @@ class LocalWorkerManager(WorkerManager):
         return self._simple_select(worker_type, model_name, worker_instances)
 
     async def _get_model(self, params: Dict, worker_type: str = "llm") -> WorkerRunData:
-        model = params.get("model")
-        if not model:
+        if model := params.get("model"):
+            return await self.select_one_instance(worker_type, model, healthy_only=True)
+        else:
             raise Exception("Model name count not be empty")
-        return await self.select_one_instance(worker_type, model, healthy_only=True)
 
     def _sync_get_model(self, params: Dict, worker_type: str = "llm") -> WorkerRunData:
-        model = params.get("model")
-        if not model:
+        if model := params.get("model"):
+            return self.sync_select_one_instance(worker_type, model, healthy_only=True)
+        else:
             raise Exception("Model name count not be empty")
-        return self.sync_select_one_instance(worker_type, model, healthy_only=True)
 
     async def generate_stream(
         self, params: Dict, async_wrapper=None, **kwargs
@@ -435,7 +434,7 @@ class LocalWorkerManager(WorkerManager):
         else:
             # Apply to all workers
             worker_instances = list(itertools.chain(*self.workers.values()))
-            logger.info(f"Apply to all workers")
+            logger.info("Apply to all workers")
         return await asyncio.gather(
             *(apply_func(worker) for worker in worker_instances)
         )
@@ -539,9 +538,7 @@ class LocalWorkerManager(WorkerManager):
         self, apply_req: WorkerApplyRequest
     ) -> WorkerApplyOutput:
         out = await self._stop_all_worker(apply_req, ignore_exception=True)
-        if not out.success:
-            return out
-        return await self._start_all_worker(apply_req)
+        return out if not out.success else await self._start_all_worker(apply_req)
 
     async def _update_all_worker_params(
         self, apply_req: WorkerApplyRequest
@@ -558,13 +555,13 @@ class LocalWorkerManager(WorkerManager):
                 need_restart = True
 
         await self._apply_worker(apply_req, update_params)
-        message = f"Update worker params successfully"
+        message = "Update worker params successfully"
         timecost = time.time() - start_time
         if need_restart:
             logger.info("Model params update successfully, begin restart worker")
             await self._restart_all_worker(apply_req)
             timecost = time.time() - start_time
-            message = f"Update worker params and restart successfully"
+            message = "Update worker params and restart successfully"
         return WorkerApplyOutput(message=message, timecost=timecost)
 
 
@@ -850,28 +847,26 @@ def _create_local_model_manager(
 
 
 def _build_worker(worker_params: ModelWorkerParameters):
-    worker_class = worker_params.worker_class
-    if worker_class:
+    if worker_class := worker_params.worker_class:
         from pilot.utils.module_utils import import_from_checked_string
 
         worker_cls = import_from_checked_string(worker_class, ModelWorker)
         logger.info(f"Import worker class from {worker_class} successfully")
-    else:
-        if (
+    elif (
             worker_params.worker_type is None
             or worker_params.worker_type == WorkerType.LLM
         ):
-            from pilot.model.cluster.worker.default_worker import DefaultModelWorker
+        from pilot.model.cluster.worker.default_worker import DefaultModelWorker
 
-            worker_cls = DefaultModelWorker
-        elif worker_params.worker_type == WorkerType.TEXT2VEC:
-            from pilot.model.cluster.worker.embedding_worker import (
-                EmbeddingsModelWorker,
-            )
+        worker_cls = DefaultModelWorker
+    elif worker_params.worker_type == WorkerType.TEXT2VEC:
+        from pilot.model.cluster.worker.embedding_worker import (
+            EmbeddingsModelWorker,
+        )
 
-            worker_cls = EmbeddingsModelWorker
-        else:
-            raise Exception("Unsupported worker type: {worker_params.worker_type}")
+        worker_cls = EmbeddingsModelWorker
+    else:
+        raise Exception("Unsupported worker type: {worker_params.worker_type}")
 
     return worker_cls()
 

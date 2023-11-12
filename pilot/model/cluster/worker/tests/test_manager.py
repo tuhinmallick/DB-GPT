@@ -55,13 +55,12 @@ def manager(request):
         model_registry = request.param.get("model_registry")
         workers = request.param.get("model_registry")
 
-    worker_manager = LocalWorkerManager(
+    yield LocalWorkerManager(
         register_func=register_func,
         deregister_func=deregister_func,
         send_heartbeat_func=send_heartbeat_func,
         model_registry=model_registry,
     )
-    yield worker_manager
 
 
 @pytest.mark.asyncio

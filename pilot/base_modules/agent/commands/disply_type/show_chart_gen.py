@@ -35,11 +35,11 @@ def data_pre_classification(df: DataFrame):
         if pd.api.types.is_numeric_dtype(df[column_name].dtypes):
             number_columns.append(column_name)
             unique_values = df[column_name].unique()
-            numeric_colums_value_map.update({column_name: len(unique_values)})
+            numeric_colums_value_map[column_name] = len(unique_values)
         else:
             non_numeric_colums.append(column_name)
             unique_values = df[column_name].unique()
-            non_numeric_colums_value_map.update({column_name: len(unique_values)})
+            non_numeric_colums_value_map[column_name] = len(unique_values)
 
     sorted_numeric_colums_value_map = dict(
         sorted(numeric_colums_value_map.items(), key=lambda x: x[1])
@@ -52,20 +52,18 @@ def data_pre_classification(df: DataFrame):
     non_numeric_colums_sort_list = list(sorted_colums_value_map.keys())
 
     #  Analyze x-coordinate
-    if len(non_numeric_colums_sort_list) > 0:
+    if non_numeric_colums_sort_list:
         x_cloumn = non_numeric_colums_sort_list[-1]
         non_numeric_colums_sort_list.remove(x_cloumn)
     else:
         x_cloumn = number_columns[0]
         numeric_colums_sort_list.remove(x_cloumn)
 
-    #  Analyze y-coordinate
-    if len(numeric_colums_sort_list) > 0:
-        y_column = numeric_colums_sort_list[0]
-        numeric_colums_sort_list.remove(y_column)
-    else:
+    if not numeric_colums_sort_list:
         raise ValueError("Not enough numeric columns for chart！")
 
+    y_column = numeric_colums_sort_list[0]
+    numeric_colums_sort_list.remove(y_column)
     return x_cloumn, y_column, non_numeric_colums_sort_list, numeric_colums_sort_list
 
 
@@ -80,22 +78,16 @@ def zh_font_set():
         "KaiTi",
     ]
     fm = FontManager()
-    mat_fonts = set(f.name for f in fm.ttflist)
-    can_use_fonts = []
-    for font_name in font_names:
-        if font_name in mat_fonts:
-            can_use_fonts.append(font_name)
-    if len(can_use_fonts) > 0:
+    mat_fonts = {f.name for f in fm.ttflist}
+    if can_use_fonts := [
+        font_name for font_name in font_names if font_name in mat_fonts
+    ]:
         plt.rcParams["font.sans-serif"] = can_use_fonts
 
 
 def format_axis(value, pos):
     # 判断是否为数字
-    if is_scientific_notation(value):
-        # 判断是否需要进行非科学计数法格式化
-
-        return "{:.2f}".format(value)
-    return value
+    return "{:.2f}".format(value) if is_scientific_notation(value) else value
 
 
 @command(
@@ -104,7 +96,7 @@ def format_axis(value, pos):
     '"df":"<data frame>"',
 )
 def response_line_chart(df: DataFrame) -> str:
-    logger.info(f"response_line_chart")
+    logger.info("response_line_chart")
     if df.size <= 0:
         raise ValueError("No Data！")
     try:
@@ -120,12 +112,11 @@ def response_line_chart(df: DataFrame) -> str:
             "KaiTi",
         ]
         fm = FontManager()
-        mat_fonts = set(f.name for f in fm.ttflist)
-        can_use_fonts = []
-        for font_name in font_names:
-            if font_name in mat_fonts:
-                can_use_fonts.append(font_name)
-        if len(can_use_fonts) > 0:
+        mat_fonts = {f.name for f in fm.ttflist}
+        can_use_fonts = [
+            font_name for font_name in font_names if font_name in mat_fonts
+        ]
+        if can_use_fonts:
             plt.rcParams["font.sans-serif"] = can_use_fonts
 
         rc = {"font.sans-serif": can_use_fonts}
@@ -159,15 +150,14 @@ def response_line_chart(df: DataFrame) -> str:
         ax.yaxis.set_major_formatter(mtick.FuncFormatter(format_axis))
         # ax.xaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: "{:,.0f}".format(x)))
 
-        chart_name = "line_" + str(uuid.uuid1()) + ".png"
+        chart_name = f"line_{str(uuid.uuid1())}.png"
         chart_path = static_message_img_path + "/" + chart_name
         plt.savefig(chart_path, dpi=100, transparent=True)
 
-        html_img = f"""<img style='max-width: 100%; max-height: 70%;'  src="/images/{chart_name}" />"""
-        return html_img
+        return f"""<img style='max-width: 100%; max-height: 70%;'  src="/images/{chart_name}" />"""
     except Exception as e:
-        logging.error("Draw Line Chart Faild!" + str(e), e)
-        raise ValueError("Draw Line Chart Faild!" + str(e))
+        logging.error(f"Draw Line Chart Faild!{str(e)}", e)
+        raise ValueError(f"Draw Line Chart Faild!{str(e)}")
 
 
 @command(
@@ -176,7 +166,7 @@ def response_line_chart(df: DataFrame) -> str:
     '"df":"<data frame>"',
 )
 def response_bar_chart(df: DataFrame) -> str:
-    logger.info(f"response_bar_chart")
+    logger.info("response_bar_chart")
     if df.size <= 0:
         raise ValueError("No Data！")
 
@@ -192,12 +182,11 @@ def response_bar_chart(df: DataFrame) -> str:
         "KaiTi",
     ]
     fm = FontManager()
-    mat_fonts = set(f.name for f in fm.ttflist)
-    can_use_fonts = []
-    for font_name in font_names:
-        if font_name in mat_fonts:
-            can_use_fonts.append(font_name)
-    if len(can_use_fonts) > 0:
+    mat_fonts = {f.name for f in fm.ttflist}
+    can_use_fonts = [
+        font_name for font_name in font_names if font_name in mat_fonts
+    ]
+    if can_use_fonts:
         plt.rcParams["font.sans-serif"] = can_use_fonts
 
     rc = {"font.sans-serif": can_use_fonts}
@@ -211,27 +200,18 @@ def response_bar_chart(df: DataFrame) -> str:
 
     fig, ax = plt.subplots(figsize=(8, 5), dpi=100)
 
-    hue = None
     x, y, non_num_columns, num_colmns = data_pre_classification(df)
-    if len(non_num_columns) >= 1:
-        hue = non_num_columns[0]
-
+    hue = non_num_columns[0] if len(non_num_columns) >= 1 else None
     if len(num_colmns) >= 1:
         if hue:
-            if len(num_colmns) >= 2:
-                can_use_columns = num_colmns[:2]
-            else:
-                can_use_columns = num_colmns
+            can_use_columns = num_colmns[:2] if len(num_colmns) >= 2 else num_colmns
             sns.barplot(data=df, x=x, y=y, hue=hue, palette="Set2", ax=ax)
             for sub_y_column in can_use_columns:
                 sns.barplot(
                     data=df, x=x, y=sub_y_column, hue=hue, palette="Set2", ax=ax
                 )
         else:
-            if len(num_colmns) > 5:
-                can_use_columns = num_colmns[:5]
-            else:
-                can_use_columns = num_colmns
+            can_use_columns = num_colmns[:5] if len(num_colmns) > 5 else num_colmns
             can_use_columns.append(y)
 
             df_melted = pd.melt(
@@ -251,11 +231,10 @@ def response_bar_chart(df: DataFrame) -> str:
     ax.yaxis.set_major_formatter(mtick.FuncFormatter(format_axis))
     # ax.xaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: "{:,.0f}".format(x)))
 
-    chart_name = "bar_" + str(uuid.uuid1()) + ".png"
+    chart_name = f"bar_{str(uuid.uuid1())}.png"
     chart_path = static_message_img_path + "/" + chart_name
     plt.savefig(chart_path, dpi=100, transparent=True)
-    html_img = f"""<img style='max-width: 100%; max-height: 70%;'  src="/images/{chart_name}" />"""
-    return html_img
+    return f"""<img style='max-width: 100%; max-height: 70%;'  src="/images/{chart_name}" />"""
 
 
 @command(
@@ -264,7 +243,7 @@ def response_bar_chart(df: DataFrame) -> str:
     '"df":"<data frame>"',
 )
 def response_pie_chart(df: DataFrame) -> str:
-    logger.info(f"response_pie_chart")
+    logger.info("response_pie_chart")
     columns = df.columns.tolist()
     if df.size <= 0:
         raise ValueError("No Data！")
@@ -280,12 +259,10 @@ def response_pie_chart(df: DataFrame) -> str:
         "KaiTi",
     ]
     fm = FontManager()
-    mat_fonts = set(f.name for f in fm.ttflist)
-    can_use_fonts = []
-    for font_name in font_names:
-        if font_name in mat_fonts:
-            can_use_fonts.append(font_name)
-    if len(can_use_fonts) > 0:
+    mat_fonts = {f.name for f in fm.ttflist}
+    if can_use_fonts := [
+        font_name for font_name in font_names if font_name in mat_fonts
+    ]:
         plt.rcParams["font.sans-serif"] = can_use_fonts
     plt.rcParams["axes.unicode_minus"] = False  # 解决无法显示符号的问题
 
@@ -305,10 +282,8 @@ def response_pie_chart(df: DataFrame) -> str:
     plt.axis("equal")  # 使饼图为正圆形
     # plt.title(columns[0])
 
-    chart_name = "pie_" + str(uuid.uuid1()) + ".png"
+    chart_name = f"pie_{str(uuid.uuid1())}.png"
     chart_path = static_message_img_path + "/" + chart_name
     plt.savefig(chart_path, bbox_inches="tight", dpi=100, transparent=True)
 
-    html_img = f"""<img style='max-width: 100%; max-height: 70%;'  src="/images/{chart_name}" />"""
-
-    return html_img
+    return f"""<img style='max-width: 100%; max-height: 70%;'  src="/images/{chart_name}" />"""

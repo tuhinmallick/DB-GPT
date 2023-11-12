@@ -37,25 +37,17 @@ class LearningExcelOutputParser(BaseOutputParser):
             return model_out_text
 
     def parse_view_response(self, speak, data) -> str:
-        if data and not isinstance(data, str):
-            ### tool out data to table view
-            html_title = f"### **Data Summary**\n{data.desciption} "
-            html_colunms = f"### **Data Structure**\n"
-            column_index = 0
-            for item in data.clounms:
-                column_index += 1
-                keys = item.keys()
-                for key in keys:
-                    html_colunms = (
-                        html_colunms + f"- **{column_index}.[{key}]**   _{item[key]}_\n"
-                    )
-
-            html_plans = f"### **Recommended analysis plan**\n"
-            index = 0
-            for item in data.plans:
-                index += 1
-                html_plans = html_plans + f"{item} \n"
-            html = f"""{html_title}\n{html_colunms}\n{html_plans}"""
-            return html
-        else:
+        if not data or isinstance(data, str):
             return speak
+        ### tool out data to table view
+        html_title = f"### **Data Summary**\n{data.desciption} "
+        html_colunms = f"### **Data Structure**\n"
+        for column_index, item in enumerate(data.clounms, start=1):
+            keys = item.keys()
+            for key in keys:
+                html_colunms = f"{html_colunms}- **{column_index}.[{key}]**   _{item[key]}_\n"
+
+        html_plans = f"### **Recommended analysis plan**\n"
+        for item in data.plans:
+            html_plans = f"{html_plans}{item} \n"
+        return f"""{html_title}\n{html_colunms}\n{html_plans}"""

@@ -4,8 +4,7 @@ from pilot.utils.parameter_utils import _extract_parameter_details
 
 
 def create_parser():
-    parser = argparse.ArgumentParser()
-    return parser
+    return argparse.ArgumentParser()
 
 
 @pytest.mark.parametrize(

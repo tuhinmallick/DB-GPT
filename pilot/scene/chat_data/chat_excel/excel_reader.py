@@ -30,8 +30,7 @@ from pilot.common.string_utils import is_chinese_include_number
 
 def excel_colunm_format(old_name: str) -> str:
     new_column = old_name.strip()
-    new_column = new_column.replace(" ", "_")
-    return new_column
+    return new_column.replace(" ", "_")
 
 
 def detect_encoding(file_path):
@@ -119,10 +118,9 @@ def deep_quotes(token, column_names=[]):
     if hasattr(token, "tokens"):
         for token_child in token.tokens:
             deep_quotes(token_child, column_names)
-    else:
-        if is_chinese_include_number(token.value):
-            new_value = token.value.replace("`", "").replace("'", "")
-            token.value = f'"{new_value}"'
+    elif is_chinese_include_number(token.value):
+        new_value = token.value.replace("`", "").replace("'", "")
+        token.value = f'"{new_value}"'
 
 
 def get_select_clause(sql):
@@ -152,10 +150,7 @@ def parse_select_fields(sql):
         if isinstance(token, sqlparse.sql.Identifier):
             fields.append(token.get_real_name())
 
-    # 处理中文
-    fields = [field.replace(f"field", f'"{field}"') for field in fields]
-
-    return fields
+    return [field.replace("field", f'"{field}"') for field in fields]
 
 
 def add_quotes_to_chinese_columns(sql, column_names=[]):
@@ -186,20 +181,19 @@ def process_identifier(identifier, column_names=[]):
             identifier.value = new_value
             identifier.normalized = new_value
             identifier.tokens = [sqlparse.sql.Token(sqlparse.tokens.Name, new_value)]
-    else:
-        if hasattr(identifier, "tokens"):
-            for token in identifier.tokens:
-                if isinstance(token, sqlparse.sql.Function):
-                    process_function(token)
-                elif token.ttype in sqlparse.tokens.Name:
-                    new_value = get_new_value(token.value)
-                    token.value = new_value
-                    token.normalized = new_value
-                elif token.value in column_names:
-                    new_value = get_new_value(token.value)
-                    token.value = new_value
-                    token.normalized = new_value
-                    token.tokens = [sqlparse.sql.Token(sqlparse.tokens.Name, new_value)]
+    elif hasattr(identifier, "tokens"):
+        for token in identifier.tokens:
+            if isinstance(token, sqlparse.sql.Function):
+                process_function(token)
+            elif token.ttype in sqlparse.tokens.Name:
+                new_value = get_new_value(token.value)
+                token.value = new_value
+                token.normalized = new_value
+            elif token.value in column_names:
+                new_value = get_new_value(token.value)
+                token.value = new_value
+                token.normalized = new_value
+                token.tokens = [sqlparse.sql.Token(sqlparse.tokens.Name, new_value)]
 
 
 def get_new_value(value):
@@ -209,8 +203,8 @@ def get_new_value(value):
 def process_function(function):
     function_params = list(function.get_parameters())
     # for param in function_params:
-    for i in range(len(function_params)):
-        param = function_params[i]
+    for function_param in function_params:
+        param = function_param
         # 如果参数部分是一个标识符（字段名）
         if isinstance(param, sqlparse.sql.Identifier):
             # 判断是否需要替换字段值
@@ -218,17 +212,14 @@ def process_function(function):
             # 替换字段值
             new_value = get_new_value(param.value)
             # new_parameter = sqlparse.sql.Identifier(f'[{param.value}]')
-            function_params[i].tokens = [
+            function_param.tokens = [
                 sqlparse.sql.Token(sqlparse.tokens.Name, new_value)
             ]
-    print(str(function))
+    print(function)
 
 
 def is_chinese(text):
-    for char in text:
-        if "一" <= char <= "鿿":
-            return True
-    return False
+    return any("一" <= char <= "鿿" for char in text)
 
 
 if __name__ == "__main__":
@@ -299,9 +290,7 @@ class ExcelReader:
             sql = add_quotes_to_chinese_columns(sql)
             print(f"excute sql:{sql}")
             results = self.db.execute(sql)
-            colunms = []
-            for descrip in results.description:
-                colunms.append(descrip[0])
+            colunms = [descrip[0] for descrip in results.description]
             return colunms, results.fetchall()
         except Exception as e:
             logging.error("excel sql run error!", e)

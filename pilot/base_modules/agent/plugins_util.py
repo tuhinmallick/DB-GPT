@@ -41,7 +41,7 @@ def inspect_zip_for_modules(zip_path: str, debug: bool = False) -> list[str]:
             if name.endswith("__init__.py") and not name.startswith("__MACOSX"):
                 logger.debug(f"Found module '{name}' in the zipfile at: {name}")
                 result.append(name)
-    if len(result) == 0:
+    if not result:
         logger.debug(f"Module '__init__.py' not found in the zipfile @ {zip_path}.")
     return result
 
@@ -113,7 +113,7 @@ def load_native_plugins(cfg: Config):
             else:
                 print("get file failed，response code：", response.status_code)
         except Exception as e:
-            print("load plugin from git exception!" + str(e))
+            print(f"load plugin from git exception!{str(e)}")
 
     t = threading.Thread(target=load_from_git, args=(cfg,))
     t.start()
@@ -206,9 +206,9 @@ def update_from_git(
     os.makedirs(download_path, exist_ok=True)
     if github_repo:
         if github_repo.index("github.com") <= 0:
-            raise ValueError("Not a correct Github repository address！" + github_repo)
+            raise ValueError(f"Not a correct Github repository address！{github_repo}")
         github_repo = github_repo.replace(".git", "")
-        url = github_repo + "/archive/refs/heads/" + branch_name + ".zip"
+        url = f"{github_repo}/archive/refs/heads/{branch_name}.zip"
         plugin_repo_name = github_repo.strip("/").split("/")[-1]
     else:
         url = (
@@ -218,7 +218,7 @@ def update_from_git(
     try:
         session = requests.Session()
         headers = {}
-        if authorization and len(authorization) > 0:
+        if authorization and authorization != "":
             headers = {"Authorization": authorization}
         response = session.get(
             url,
@@ -241,9 +241,9 @@ def update_from_git(
             return plugin_repo_name
         else:
             logger.error("update plugins faild，response code：", response.status_code)
-            raise ValueError("download plugin faild!" + response.status_code)
+            raise ValueError(f"download plugin faild!{response.status_code}")
     except Exception as e:
-        logger.error("update plugins from git exception!" + str(e))
+        logger.error(f"update plugins from git exception!{str(e)}")
         raise ValueError("download plugin exception!", e)
 
 

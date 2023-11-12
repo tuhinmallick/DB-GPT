@@ -46,8 +46,8 @@ class PostgreSQLDatabase(RDBMSDatabase):
                 "SELECT viewname FROM pg_catalog.pg_views WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'"
             )
         )
-        table_results = set(row[0] for row in table_results)
-        view_results = set(row[0] for row in view_results)
+        table_results = {row[0] for row in table_results}
+        view_results = {row[0] for row in view_results}
         self._all_tables = table_results.union(view_results)
         self._metadata.reflect(bind=self._engine)
         return self._all_tables
@@ -56,14 +56,13 @@ class PostgreSQLDatabase(RDBMSDatabase):
         session = self._db_sessions()
         cursor = session.execute(
             text(
-                f"""
+                """
                 SELECT DISTINCT grantee, privilege_type
                 FROM information_schema.role_table_grants
                 WHERE grantee = CURRENT_USER;"""
             )
         )
-        grants = cursor.fetchall()
-        return grants
+        return cursor.fetchall()
 
     def get_collation(self):
         """Get collation."""
@@ -74,8 +73,7 @@ class PostgreSQLDatabase(RDBMSDatabase):
                     "SELECT datcollate AS collation FROM pg_database WHERE datname = current_database();"
                 )
             )
-            collation = cursor.fetchone()[0]
-            return collation
+            return cursor.fetchone()[0]
         except Exception as e:
             print("postgresql get collation error: ", e)
             return None
@@ -113,8 +111,7 @@ class PostgreSQLDatabase(RDBMSDatabase):
                 "SELECT pg_encoding_to_char(encoding) FROM pg_database WHERE datname = current_database();"
             )
         )
-        character_set = cursor.fetchone()[0]
-        return character_set
+        return cursor.fetchone()[0]
 
     def get_show_create_table(self, table_name):
         cur = self.session.execute(
@@ -168,7 +165,7 @@ class PostgreSQLDatabase(RDBMSDatabase):
         return self.session.execute(text("SELECT current_database()")).scalar()
 
     def table_simple_info(self):
-        _sql = f"""
+        _sql = """
             SELECT table_name, string_agg(column_name, ', ') AS schema_info
             FROM (
                 SELECT c.relname AS table_name, a.attname AS column_name
@@ -185,8 +182,7 @@ class PostgreSQLDatabase(RDBMSDatabase):
             GROUP BY table_name;
             """
         cursor = self.session.execute(text(_sql))
-        results = cursor.fetchall()
-        return results
+        return cursor.fetchall()
 
     def get_fields(self, table_name, schema_name="public"):
         """Get column fields about specified table."""

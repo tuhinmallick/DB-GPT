@@ -52,7 +52,7 @@ class RemoteModelWorker(ModelWorker):
         async with httpx.AsyncClient() as client:
             delimiter = b"\0"
             buffer = b""
-            url = self.worker_addr + "/generate_stream"
+            url = f"{self.worker_addr}/generate_stream"
             logger.debug(f"Send async_generate_stream to url {url}, params: {params}")
             async with client.stream(
                 "POST",
@@ -80,7 +80,7 @@ class RemoteModelWorker(ModelWorker):
         import httpx
 
         async with httpx.AsyncClient() as client:
-            url = self.worker_addr + "/generate"
+            url = f"{self.worker_addr}/generate"
             logger.debug(f"Send async_generate to url {url}, params: {params}")
             response = await client.post(
                 url,
@@ -94,7 +94,7 @@ class RemoteModelWorker(ModelWorker):
         """Get embeddings for input"""
         import requests
 
-        url = self.worker_addr + "/embeddings"
+        url = f"{self.worker_addr}/embeddings"
         logger.debug(f"Send embeddings to url {url}, params: {params}")
         response = requests.post(
             url,
@@ -109,7 +109,7 @@ class RemoteModelWorker(ModelWorker):
         import httpx
 
         async with httpx.AsyncClient() as client:
-            url = self.worker_addr + "/embeddings"
+            url = f"{self.worker_addr}/embeddings"
             logger.debug(f"Send async_embeddings to url {url}")
             response = await client.post(
                 url,

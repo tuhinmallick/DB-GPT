@@ -28,58 +28,55 @@ class AgentHub:
 
     def install_plugin(self, plugin_name: str, user_name: str = None):
         logger.info(f"install_plugin {plugin_name}")
-        plugin_entity = self.hub_dao.get_by_name(plugin_name)
-        if plugin_entity:
-            if plugin_entity.storage_channel == PluginStorageType.Git.value:
-                try:
-                    branch_name = None
-                    authorization = None
-                    if plugin_entity.download_param:
-                        download_param = json.loads(plugin_entity.download_param)
-                        branch_name = download_param.get("branch_name")
-                        authorization = download_param.get("authorization")
-                    file_name = self.__download_from_git(
-                        plugin_entity.storage_url, branch_name, authorization
-                    )
-
-                    # add to my plugins and edit hub status
-                    plugin_entity.installed = plugin_entity.installed + 1
-
-                    my_plugin_entity = self.my_plugin_dao.get_by_user_and_plugin(
-                        user_name, plugin_name
-                    )
-                    if my_plugin_entity is None:
-                        my_plugin_entity = self.__build_my_plugin(plugin_entity)
-                    my_plugin_entity.file_name = file_name
-                    if user_name:
-                        # TODO use user
-                        my_plugin_entity.user_code = user_name
-                        my_plugin_entity.user_name = user_name
-                        my_plugin_entity.tenant = ""
-                    else:
-                        my_plugin_entity.user_code = Default_User
-
-                    with self.hub_dao.get_session() as session:
-                        try:
-                            if my_plugin_entity.id is None:
-                                session.add(my_plugin_entity)
-                            else:
-                                session.merge(my_plugin_entity)
-                            session.merge(plugin_entity)
-                            session.commit()
-                            session.close()
-                        except Exception as e:
-                            logger.error("install merge roll back!" + str(e))
-                            session.rollback()
-                except Exception as e:
-                    logger.error("install pluguin exception!", e)
-                    raise ValueError(f"Install Plugin {plugin_name} Faild! {str(e)}")
-            else:
-                raise ValueError(
-                    f"Unsupport Storage Channel {plugin_entity.storage_channel}!"
-                )
-        else:
+        if not (plugin_entity := self.hub_dao.get_by_name(plugin_name)):
             raise ValueError(f"Can't Find Plugin {plugin_name}!")
+        if plugin_entity.storage_channel != PluginStorageType.Git.value:
+            raise ValueError(
+                f"Unsupport Storage Channel {plugin_entity.storage_channel}!"
+            )
+        try:
+            branch_name = None
+            authorization = None
+            if plugin_entity.download_param:
+                download_param = json.loads(plugin_entity.download_param)
+                branch_name = download_param.get("branch_name")
+                authorization = download_param.get("authorization")
+            file_name = self.__download_from_git(
+                plugin_entity.storage_url, branch_name, authorization
+            )
+
+            # add to my plugins and edit hub status
+            plugin_entity.installed = plugin_entity.installed + 1
+
+            my_plugin_entity = self.my_plugin_dao.get_by_user_and_plugin(
+                user_name, plugin_name
+            )
+            if my_plugin_entity is None:
+                my_plugin_entity = self.__build_my_plugin(plugin_entity)
+            my_plugin_entity.file_name = file_name
+            if user_name:
+                # TODO use user
+                my_plugin_entity.user_code = user_name
+                my_plugin_entity.user_name = user_name
+                my_plugin_entity.tenant = ""
+            else:
+                my_plugin_entity.user_code = Default_User
+
+            with self.hub_dao.get_session() as session:
+                try:
+                    if my_plugin_entity.id is None:
+                        session.add(my_plugin_entity)
+                    else:
+                        session.merge(my_plugin_entity)
+                    session.merge(plugin_entity)
+                    session.commit()
+                    session.close()
+                except Exception as e:
+                    logger.error(f"install merge roll back!{str(e)}")
+                    session.rollback()
+        except Exception as e:
+            logger.error("install pluguin exception!", e)
+            raise ValueError(f"Install Plugin {plugin_name} Faild! {str(e)}")
 
     def uninstall_plugin(self, plugin_name, user):
         logger.info(f"uninstall_plugin:{plugin_name},{user}")
@@ -104,11 +101,7 @@ class AgentHub:
         if plugin_entity is not None:
             # delete package file if not use
             plugin_infos = self.hub_dao.get_by_storage_url(plugin_entity.storage_url)
-            have_installed = False
-            for plugin_info in plugin_infos:
-                if plugin_info.installed > 0:
-                    have_installed = True
-                    break
+            have_installed = any(plugin_info.installed > 0 for plugin_info in plugin_infos)
             if not have_installed:
                 plugin_repo_name = (
                     plugin_entity.storage_url.replace(".git", "")
@@ -148,8 +141,7 @@ class AgentHub:
         git_plugins = scan_plugins(self.temp_hub_file_path)
         try:
             for git_plugin in git_plugins:
-                old_hub_info = self.hub_dao.get_by_name(git_plugin._name)
-                if old_hub_info:
+                if old_hub_info := self.hub_dao.get_by_name(git_plugin._name):
                     plugin_hub_info = old_hub_info
                 else:
                     plugin_hub_info = PluginHubEntity()
@@ -161,7 +153,7 @@ class AgentHub:
                     download_param = {}
                     if branch_name:
                         download_param["branch_name"] = branch_name
-                    if authorization and len(authorization) > 0:
+                    if authorization and authorization != "":
                         download_param["authorization"] = authorization
                     plugin_hub_info.download_param = json.dumps(download_param)
                     plugin_hub_info.installed = 0
@@ -207,7 +199,7 @@ class AgentHub:
             self.my_plugin_dao.update(my_plugin_entiy)
 
     def reload_my_plugins(self):
-        logger.info(f"load_plugins start!")
+        logger.info("load_plugins start!")
         return scan_plugins(self.plugin_dir)
 
     def get_my_plugin(self, user: str):

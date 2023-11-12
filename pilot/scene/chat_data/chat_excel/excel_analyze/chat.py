@@ -53,24 +53,25 @@ class ChatExcel(BaseChat):
     def _generate_numbered_list(self) -> str:
         command_strings = []
         if CFG.command_disply:
-            for name, item in CFG.command_disply.commands.items():
-                if item.enabled:
-                    command_strings.append(f"{name}:{item.description}")
-            # command_strings += [
-            #     str(item)
-            #     for item in CFG.command_disply.commands.values()
-            #     if item.enabled
-            # ]
+            command_strings.extend(
+                f"{name}:{item.description}"
+                for name, item in CFG.command_disply.commands.items()
+                if item.enabled
+            )
+                # command_strings += [
+                #     str(item)
+                #     for item in CFG.command_disply.commands.values()
+                #     if item.enabled
+                # ]
         return "\n".join(f"{i+1}. {item}" for i, item in enumerate(command_strings))
 
     @trace()
     async def generate_input_values(self) -> Dict:
-        input_values = {
+        return {
             "user_input": self.current_user_input,
             "table_name": self.excel_reader.table_name,
             "disply_type": self._generate_numbered_list(),
         }
-        return input_values
 
     async def prepare(self):
         logger.info(f"{self.chat_mode} prepare start!")
@@ -78,15 +79,14 @@ class ChatExcel(BaseChat):
             return None
         chat_param = {
             "chat_session_id": self.chat_session_id,
-            "user_input": "[" + self.excel_reader.excel_file_name + "]" + " Analysis！",
+            "user_input": f"[{self.excel_reader.excel_file_name}] Analysis！",
             "parent_mode": self.chat_mode,
             "select_param": self.excel_reader.excel_file_name,
             "excel_reader": self.excel_reader,
             "model_name": self.model_name,
         }
         learn_chat = ExcelLearning(**chat_param)
-        result = await learn_chat.nostream_call()
-        return result
+        return await learn_chat.nostream_call()
 
     def stream_plugin_call(self, text):
         text = text.replace("\n", " ")

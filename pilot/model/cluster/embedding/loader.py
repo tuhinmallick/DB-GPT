@@ -25,10 +25,10 @@ class EmbeddingLoader:
             "sys_infos": _get_dict_from_obj(get_system_info()),
         }
         with root_tracer.start_span(
-            "EmbeddingLoader.load", span_type=SpanType.RUN, metadata=metadata
-        ):
+                "EmbeddingLoader.load", span_type=SpanType.RUN, metadata=metadata
+            ):
             # add more models
-            if model_name in ["proxy_openai", "proxy_azure"]:
+            if model_name in {"proxy_openai", "proxy_azure"}:
                 from langchain.embeddings import OpenAIEmbeddings
 
                 return OpenAIEmbeddings(**param.build_kwargs())

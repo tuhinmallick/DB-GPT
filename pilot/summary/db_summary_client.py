@@ -44,7 +44,7 @@ class DBSummaryClient:
             model_name=EMBEDDING_MODEL_CONFIG[CFG.EMBEDDING_MODEL]
         )
         vector_store_config = {
-            "vector_store_name": dbname + "_summary",
+            "vector_store_name": f"{dbname}_summary",
             "vector_store_type": CFG.VECTOR_STORE_TYPE,
             "embeddings": embeddings,
         }
@@ -72,7 +72,7 @@ class DBSummaryClient:
                 table_summary,
             ) in db_summary_client.get_table_summary().items():
                 table_vector_store_config = {
-                    "vector_store_name": dbname + "_" + table_name + "_ts",
+                    "vector_store_name": f"{dbname}_{table_name}_ts",
                     "vector_store_type": CFG.VECTOR_STORE_TYPE,
                     "embeddings": embeddings,
                 }
@@ -89,7 +89,7 @@ class DBSummaryClient:
         from pilot.embedding_engine.embedding_factory import EmbeddingFactory
 
         vector_store_config = {
-            "vector_store_name": dbname + "_profile",
+            "vector_store_name": f"{dbname}_profile",
             "vector_store_type": CFG.VECTOR_STORE_TYPE,
         }
         embedding_factory = CFG.SYSTEM_APP.get_component(
@@ -101,8 +101,7 @@ class DBSummaryClient:
             embedding_factory=embedding_factory,
         )
         table_docs = knowledge_embedding_client.similar_search(query, topk)
-        ans = [d.page_content for d in table_docs]
-        return ans
+        return [d.page_content for d in table_docs]
 
     def get_similar_tables(self, dbname, query, topk):
         """get user query related tables info"""
@@ -110,7 +109,7 @@ class DBSummaryClient:
         from pilot.embedding_engine.embedding_factory import EmbeddingFactory
 
         vector_store_config = {
-            "vector_store_name": dbname + "_summary",
+            "vector_store_name": f"{dbname}_summary",
             "vector_store_type": CFG.VECTOR_STORE_TYPE,
         }
         embedding_factory = CFG.SYSTEM_APP.get_component(
@@ -138,7 +137,7 @@ class DBSummaryClient:
         related_table_summaries = []
         for table in related_tables:
             vector_store_config = {
-                "vector_store_name": dbname + "_" + table + "_ts",
+                "vector_store_name": f"{dbname}_{table}_ts",
                 "vector_store_type": CFG.VECTOR_STORE_TYPE,
             }
             knowledge_embedding_client = EmbeddingEngine(
@@ -170,7 +169,7 @@ class DBSummaryClient:
         """
         from pilot.embedding_engine.string_embedding import StringEmbedding
 
-        vector_store_name = dbname + "_profile"
+        vector_store_name = f"{dbname}_profile"
         profile_store_config = {
             "vector_store_name": vector_store_name,
             "vector_store_type": CFG.VECTOR_STORE_TYPE,

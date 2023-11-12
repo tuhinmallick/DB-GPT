@@ -49,12 +49,9 @@ class RemoteWorkerManager(LocalWorkerManager):
             if response.status_code != 200:
                 if error_handler:
                     return error_handler(response)
-                else:
-                    error_msg = f"Request to {url} failed, error: {response.text}"
-                    raise Exception(error_msg)
-            if success_handler:
-                return success_handler(response)
-            return response.json()
+                error_msg = f"Request to {url} failed, error: {response.text}"
+                raise Exception(error_msg)
+            return success_handler(response) if success_handler else response.json()
 
     async def _apply_to_worker_manager_instances(self):
         pass
@@ -66,7 +63,7 @@ class RemoteWorkerManager(LocalWorkerManager):
 
         async def get_supported_models(worker_run_data) -> List[WorkerSupportedModel]:
             def handler(response):
-                return list(WorkerSupportedModel.from_dict(m) for m in response.json())
+                return [WorkerSupportedModel.from_dict(m) for m in response.json()]
 
             return await self._fetch_from_worker(
                 worker_run_data, "/models/supports", success_handler=handler
@@ -86,7 +83,7 @@ class RemoteWorkerManager(LocalWorkerManager):
         worker_instances = await self.get_model_instances(
             WORKER_MANAGER_SERVICE_TYPE, WORKER_MANAGER_SERVICE_NAME
         )
-        error_msg = f"Cound not found worker instances"
+        error_msg = "Cound not found worker instances"
         if host and port:
             worker_instances = [
                 ins for ins in worker_instances if ins.host == host and ins.port == port

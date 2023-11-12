@@ -35,8 +35,7 @@ def _get_worker_manager(address: str):
     from pilot.model.cluster import RemoteWorkerManager, ModelRegistryClient
 
     registry = ModelRegistryClient(address)
-    worker_manager = RemoteWorkerManager(registry)
-    return worker_manager
+    return RemoteWorkerManager(registry)
 
 
 @click.group("model")
@@ -54,10 +53,7 @@ def _get_worker_manager(address: str):
 def model_cli_group(address: str):
     """Clients that manage model serving"""
     global MODEL_CONTROLLER_ADDRESS
-    if not address:
-        MODEL_CONTROLLER_ADDRESS = _detect_controller_address()
-    else:
-        MODEL_CONTROLLER_ADDRESS = address
+    MODEL_CONTROLLER_ADDRESS = address if address else _detect_controller_address()
 
 
 @model_cli_group.command()
@@ -189,11 +185,12 @@ def _remote_model_dynamic_factory() -> Callable[[None], List[Type]]:
     loop = get_or_create_event_loop()
     models = loop.run_until_complete(worker_manager.supported_models())
 
-    fields_dict = {}
-    fields_dict["model_name"] = (
-        str,
-        field(default=None, metadata={"help": "The model name to deploy"}),
-    )
+    fields_dict = {
+        "model_name": (
+            str,
+            field(default=None, metadata={"help": "The model name to deploy"}),
+        )
+    }
     fields_dict["host"] = (
         str,
         field(default=None, metadata={"help": "The remote host to deploy model"}),

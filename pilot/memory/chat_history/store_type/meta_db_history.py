@@ -25,12 +25,8 @@ class DbHistoryMemory(BaseChatHistoryMemory):
         self.chat_history_dao = ChatHistoryDao()
 
     def messages(self) -> List[OnceConversation]:
-        chat_history: ChatHistoryEntity = self.chat_history_dao.get_by_uid(
-            self.chat_seesion_id
-        )
-        if chat_history:
-            context = chat_history.messages
-            if context:
+        if chat_history := self.chat_history_dao.get_by_uid(self.chat_seesion_id):
+            if context := chat_history.messages:
                 conversations: List[OnceConversation] = json.loads(context)
                 return conversations
         return []
@@ -44,7 +40,7 @@ class DbHistoryMemory(BaseChatHistoryMemory):
 
             self.chat_history_dao.update(chat_history)
         except Exception as e:
-            logger.error("init create conversation log error！" + str(e))
+            logger.error(f"init create conversation log error！{str(e)}")
 
     def append(self, once_message: OnceConversation) -> None:
         logger.info(f"db history append: {once_message}")
@@ -53,8 +49,7 @@ class DbHistoryMemory(BaseChatHistoryMemory):
         )
         conversations: List[OnceConversation] = []
         if chat_history:
-            context = chat_history.messages
-            if context:
+            if context := chat_history.messages:
                 conversations = json.loads(context)
             else:
                 chat_history.summary = once_message.get_user_conv().content
@@ -84,9 +79,7 @@ class DbHistoryMemory(BaseChatHistoryMemory):
         return chat_history.__dict__
 
     def get_messages(self) -> List[OnceConversation]:
-        # logger.info("get_messages:{}", self.chat_seesion_id)
-        chat_history = self.chat_history_dao.get_by_uid(self.chat_seesion_id)
-        if chat_history:
+        if chat_history := self.chat_history_dao.get_by_uid(self.chat_seesion_id):
             context = chat_history.messages
             return json.loads(context)
         return []
@@ -95,7 +88,4 @@ class DbHistoryMemory(BaseChatHistoryMemory):
     def conv_list(cls, user_name: str = None) -> None:
         chat_history_dao = ChatHistoryDao()
         history_list = chat_history_dao.list_last_20()
-        result = []
-        for history in history_list:
-            result.append(history.__dict__)
-        return result
+        return [history.__dict__ for history in history_list]

@@ -97,7 +97,8 @@ def mount_static_files(app):
         name="static2",
     )
     app.mount(
-        "/_next/static", StaticFiles(directory=static_file_path + "/_next/static")
+        "/_next/static",
+        StaticFiles(directory=f"{static_file_path}/_next/static"),
     )
     app.mount("/", StaticFiles(directory=static_file_path, html=True), name="static")
 

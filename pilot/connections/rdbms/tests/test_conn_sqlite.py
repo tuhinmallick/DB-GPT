@@ -11,13 +11,12 @@ from pilot.connections.rdbms.conn_sqlite import SQLiteConnect
 def db():
     temp_db_file = tempfile.NamedTemporaryFile(delete=False)
     temp_db_file.close()
-    conn = SQLiteConnect.from_file_path(temp_db_file.name)
-    yield conn
+    yield SQLiteConnect.from_file_path(temp_db_file.name)
     os.unlink(temp_db_file.name)
 
 
 def test_get_table_names(db):
-    assert list(db.get_table_names()) == []
+    assert not list(db.get_table_names())
 
 
 def test_get_table_info(db):
@@ -129,9 +128,9 @@ def test_db_dir_exist_dir():
         file_path = os.path.join(new_dir, "sqlite.db")
         db = SQLiteConnect.from_file_path(file_path)
         assert os.path.exists(new_dir) == True
-        assert list(db.get_table_names()) == []
+        assert not list(db.get_table_names())
     with tempfile.TemporaryDirectory() as existing_dir:
         file_path = os.path.join(existing_dir, "sqlite.db")
         db = SQLiteConnect.from_file_path(file_path)
         assert os.path.exists(existing_dir) == True
-        assert list(db.get_table_names()) == []
+        assert not list(db.get_table_names())

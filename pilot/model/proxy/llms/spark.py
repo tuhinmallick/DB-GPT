@@ -43,19 +43,11 @@ def spark_generate_stream(
             history.append({"role": "system", "content": message.content})
         elif message.role == ModelMessageRoleType.AI:
             history.append({"role": "assistant", "content": message.content})
-        else:
-            pass
-
     spark_api = SparkAPI(proxy_app_id, proxy_api_key, proxy_api_secret, url)
     request_url = spark_api.gen_url()
 
     temp_his = history[::-1]
-    last_user_input = None
-    for m in temp_his:
-        if m["role"] == "user":
-            last_user_input = m
-            break
-
+    last_user_input = next((m for m in temp_his if m["role"] == "user"), None)
     data = {
         "header": {"app_id": proxy_app_id, "uid": params.get("request_id", 1)},
         "parameter": {
@@ -102,9 +94,9 @@ class SparkAPI:
         now = datetime.now()
         date = format_date_time(mktime(now.timetuple()))
 
-        _signature = "host: " + self.host + "\n"
-        _signature += "data: " + date + "\n"
-        _signature += "GET " + self.path + " HTTP/1.1"
+        _signature = f"host: {self.host}" + "\n"
+        _signature += f"data: {date}" + "\n"
+        _signature += f"GET {self.path} HTTP/1.1"
 
         _signature_sha = hmac.new(
             self.api_secret.encode("utf-8"),
@@ -123,5 +115,4 @@ class SparkAPI:
 
         v = {"authorization": authorization, "date": date, "host": self.host}
 
-        url = self.spark_url + "?" + urlencode(v)
-        return url
+        return f"{self.spark_url}?{urlencode(v)}"

@@ -16,7 +16,7 @@ router = APIRouter()
 
 @router.get("/v1/worker/model/params")
 async def model_params():
-    print(f"/worker/model/params")
+    print("/worker/model/params")
     try:
         from pilot.model.cluster import WorkerManagerFactory
 
@@ -32,15 +32,13 @@ async def model_params():
                 model_dict["port"] = worker.port
                 params.append(model_dict)
         return Result.succ(params)
-        if not worker_instance:
-            return Result.failed(code="E000X", msg=f"can not find worker manager")
     except Exception as e:
         return Result.failed(code="E000X", msg=f"model stop failed {e}")
 
 
 @router.get("/v1/worker/model/list")
 async def model_list():
-    print(f"/worker/model/list")
+    print("/worker/model/list")
     try:
         from pilot.model.cluster.controller.controller import BaseModelController
 
@@ -55,7 +53,7 @@ async def model_list():
         models = await controller.get_all_instances()
         for model in models:
             worker_name, worker_type = model.model_name.split("@")
-            if worker_type == "llm" or worker_type == "text2vec":
+            if worker_type in ["llm", "text2vec"]:
                 response = ModelResponse(
                     model_name=worker_name,
                     model_type=worker_type,
@@ -83,7 +81,7 @@ async def model_list():
 
 @router.post("/v1/worker/model/stop")
 async def model_stop(request: WorkerStartupRequest):
-    print(f"/v1/worker/model/stop:")
+    print("/v1/worker/model/stop:")
     try:
         from pilot.model.cluster.controller.controller import BaseModelController
 
@@ -91,7 +89,7 @@ async def model_stop(request: WorkerStartupRequest):
             ComponentType.WORKER_MANAGER_FACTORY, WorkerManagerFactory
         ).create()
         if not worker_manager:
-            return Result.failed(code="E000X", msg=f"can not find worker manager")
+            return Result.failed(code="E000X", msg="can not find worker manager")
         request.params = {}
         return Result.succ(await worker_manager.model_shutdown(request))
     except Exception as e:
@@ -100,13 +98,13 @@ async def model_stop(request: WorkerStartupRequest):
 
 @router.post("/v1/worker/model/start")
 async def model_start(request: WorkerStartupRequest):
-    print(f"/v1/worker/model/start:")
+    print("/v1/worker/model/start:")
     try:
-        worker_manager = CFG.SYSTEM_APP.get_component(
+        if worker_manager := CFG.SYSTEM_APP.get_component(
             ComponentType.WORKER_MANAGER_FACTORY, WorkerManagerFactory
-        ).create()
-        if not worker_manager:
-            return Result.failed(code="E000X", msg=f"can not find worker manager")
-        return Result.succ(await worker_manager.model_startup(request))
+        ).create():
+            return Result.succ(await worker_manager.model_startup(request))
+        else:
+            return Result.failed(code="E000X", msg="can not find worker manager")
     except Exception as e:
         return Result.failed(code="E000X", msg=f"model start failed {e}")
