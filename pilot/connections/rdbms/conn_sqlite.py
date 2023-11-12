@@ -28,7 +28,7 @@ class SQLiteConnect(RDBMSDatabase):
         directory = os.path.dirname(file_path)
         if not os.path.exists(directory):
             os.makedirs(directory)
-        return cls(create_engine("sqlite:///" + file_path, **_engine_args), **kwargs)
+        return cls(create_engine(f"sqlite:///{file_path}", **_engine_args), **kwargs)
 
     def get_indexes(self, table_name):
         """Get table indexes about specified table."""
@@ -79,8 +79,8 @@ class SQLiteConnect(RDBMSDatabase):
         view_results = self.session.execute(
             text("SELECT name FROM sqlite_master WHERE type='view'")
         )
-        table_results = set(row[0] for row in table_results)
-        view_results = set(row[0] for row in view_results)
+        table_results = {row[0] for row in table_results}
+        view_results = {row[0] for row in view_results}
         self._all_tables = table_results.union(view_results)
         self._metadata.reflect(bind=self._engine)
         return self._all_tables
@@ -96,7 +96,7 @@ class SQLiteConnect(RDBMSDatabase):
     def get_table_comments(self, db_name=None):
         cursor = self.session.execute(
             text(
-                f"""
+                """
                 SELECT name, sql FROM sqlite_master WHERE type='table'
                 """
             )
@@ -107,7 +107,7 @@ class SQLiteConnect(RDBMSDatabase):
         ]
 
     def table_simple_info(self) -> Iterable[str]:
-        _tables_sql = f"""
+        _tables_sql = """
                 SELECT name FROM sqlite_master WHERE type='table'
             """
         cursor = self.session.execute(text(_tables_sql))

@@ -23,19 +23,12 @@ os.makedirs(default_db_path, exist_ok=True)
 # Meta Info
 META_DATA_DATABASE = CFG.LOCAL_DB_NAME
 db_name = META_DATA_DATABASE
-db_path = default_db_path + f"/{db_name}.db"
+db_path = f"{default_db_path}/{db_name}.db"
 connection = sqlite3.connect(db_path)
 
 if CFG.LOCAL_DB_TYPE == "mysql":
     engine_temp = create_engine(
-        f"mysql+pymysql://"
-        + quote(CFG.LOCAL_DB_USER)
-        + ":"
-        + quote(CFG.LOCAL_DB_PASSWORD)
-        + "@"
-        + CFG.LOCAL_DB_HOST
-        + ":"
-        + str(CFG.LOCAL_DB_PORT)
+        f"mysql+pymysql://{quote(CFG.LOCAL_DB_USER)}:{quote(CFG.LOCAL_DB_PASSWORD)}@{CFG.LOCAL_DB_HOST}:{str(CFG.LOCAL_DB_PORT)}"
     )
     # check and auto create mysqldatabase
     try:
@@ -50,15 +43,10 @@ if CFG.LOCAL_DB_TYPE == "mysql":
         logger.error(f"{db_name} not connect success!")
 
     engine = create_engine(
-        f"mysql+pymysql://"
-        + quote(CFG.LOCAL_DB_USER)
-        + ":"
-        + quote(CFG.LOCAL_DB_PASSWORD)
-        + "@"
-        + CFG.LOCAL_DB_HOST
-        + ":"
-        + str(CFG.LOCAL_DB_PORT)
-        + f"/{db_name}"
+        (
+            f"mysql+pymysql://{quote(CFG.LOCAL_DB_USER)}:{quote(CFG.LOCAL_DB_PASSWORD)}@{CFG.LOCAL_DB_HOST}:{str(CFG.LOCAL_DB_PORT)}"
+            + f"/{db_name}"
+        )
     )
 else:
     engine = create_engine(f"sqlite:///{db_path}")
@@ -71,15 +59,15 @@ Base = declarative_base()
 
 # Base.metadata.create_all()
 
-alembic_ini_path = default_db_path + "/alembic.ini"
+alembic_ini_path = f"{default_db_path}/alembic.ini"
 alembic_cfg = AlembicConfig(alembic_ini_path)
 
 alembic_cfg.set_main_option("sqlalchemy.url", str(engine.url))
 
-os.makedirs(default_db_path + "/alembic", exist_ok=True)
-os.makedirs(default_db_path + "/alembic/versions", exist_ok=True)
+os.makedirs(f"{default_db_path}/alembic", exist_ok=True)
+os.makedirs(f"{default_db_path}/alembic/versions", exist_ok=True)
 
-alembic_cfg.set_main_option("script_location", default_db_path + "/alembic")
+alembic_cfg.set_main_option("script_location", f"{default_db_path}/alembic")
 
 # 将模型和会话传递给Alembic配置
 alembic_cfg.attributes["target_metadata"] = Base.metadata
@@ -112,7 +100,7 @@ def ddl_init_and_upgrade(disable_alembic_upgrade: bool):
     with engine.connect() as connection:
         alembic_cfg.attributes["connection"] = connection
         heads = command.heads(alembic_cfg)
-        print("heads:" + str(heads))
+        print(f"heads:{str(heads)}")
 
         command.revision(alembic_cfg, "dbgpt ddl upate", True)
         command.upgrade(alembic_cfg, "head")

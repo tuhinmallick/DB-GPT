@@ -10,18 +10,16 @@ from functools import lru_cache
 def _get_abspath_of_current_command(command_path: str):
     if not command_path.endswith(".py"):
         return command_path
-    # This implementation is very ugly
-    command_path = os.path.join(
+    return os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "scripts",
         "cli_scripts.py",
     )
-    return command_path
 
 
 def _run_current_with_daemon(name: str, log_file: str):
     # Get all arguments except for --daemon
-    args = [arg for arg in sys.argv if arg != "--daemon" and arg != "-d"]
+    args = [arg for arg in sys.argv if arg not in ["--daemon", "-d"]]
     args[0] = _get_abspath_of_current_command(args[0])
 
     daemon_cmd = [sys.executable] + args
@@ -128,9 +126,11 @@ def _get_ports_by_cmdline_part(service_keys: List[str]) -> List[int]:
 
             # Check if all the service keys are present in the cmdline
             if all(fragment in cmdline for fragment in service_keys):
-                for connection in process.info["connections"]:
-                    if connection.status == psutil.CONN_LISTEN:
-                        ports.append(connection.laddr.port)
+                ports.extend(
+                    connection.laddr.port
+                    for connection in process.info["connections"]
+                    if connection.status == psutil.CONN_LISTEN
+                )
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
 
@@ -142,8 +142,7 @@ def _get_ports_by_cmdline_part(service_keys: List[str]) -> List[int]:
 
 @lru_cache()
 def _detect_controller_address() -> str:
-    controller_addr = os.getenv("CONTROLLER_ADDRESS")
-    if controller_addr:
+    if controller_addr := os.getenv("CONTROLLER_ADDRESS"):
         return controller_addr
 
     cmdline_fragments = [
@@ -154,8 +153,7 @@ def _detect_controller_address() -> str:
     ]
 
     for fragments in cmdline_fragments:
-        ports = _get_ports_by_cmdline_part(fragments)
-        if ports:
+        if ports := _get_ports_by_cmdline_part(fragments):
             return f"http://127.0.0.1:{ports[0]}"
 
-    return f"http://127.0.0.1:8000"
+    return "http://127.0.0.1:8000"

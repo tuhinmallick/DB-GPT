@@ -50,7 +50,7 @@ async def client(request, system_app: SystemApp):
         del param["api_keys"]
     headers = {}
     if client_api_key:
-        headers["Authorization"] = "Bearer " + client_api_key
+        headers["Authorization"] = f"Bearer {client_api_key}"
     print(f"param: {param}")
     if api_settings:
         # Clear global api keys

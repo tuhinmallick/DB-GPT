@@ -25,10 +25,9 @@ class ExtractTriplet(BaseChat):
         self.extract_mode = chat_param["select_param"]
 
     def generate_input_values(self):
-        input_values = {
+        return {
             "text": self.user_input,
         }
-        return input_values
 
     @property
     def chat_type(self) -> str:

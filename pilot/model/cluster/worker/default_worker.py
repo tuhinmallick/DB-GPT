@@ -33,8 +33,7 @@ class DefaultModelWorker(ModelWorker):
         self._support_async = False
 
     def load_worker(self, model_name: str, model_path: str, **kwargs) -> None:
-        if model_path.endswith("/"):
-            model_path = model_path[:-1]
+        model_path = model_path.removesuffix("/")
         model_path = _get_model_real_path(model_name, model_path)
         self.model_name = model_name
         self.model_path = model_path
@@ -231,11 +230,11 @@ class DefaultModelWorker(ModelWorker):
         str_prompt = params.get("prompt")
         print(f"model prompt: \n\n{str_prompt}\n\n{stream_type}stream output:\n")
 
-        generate_stream_func_str_name = "{}.{}".format(
-            generate_stream_func.__module__, generate_stream_func.__name__
+        generate_stream_func_str_name = (
+            f"{generate_stream_func.__module__}.{generate_stream_func.__name__}"
         )
 
-        span_params = {k: v for k, v in params.items()}
+        span_params = dict(params.items())
         if "messages" in span_params:
             span_params["messages"] = list(
                 map(lambda m: m.dict(), span_params["messages"])
@@ -276,14 +275,11 @@ class DefaultModelWorker(ModelWorker):
         return model_output, incremental_output, output
 
     def _handle_exception(self, e):
-        # Check if the exception is a torch.cuda.CudaError and if torch was imported.
-        if _torch_imported and isinstance(e, torch.cuda.CudaError):
-            model_output = ModelOutput(
-                text="**GPU OutOfMemory, Please Refresh.**", error_code=0
-            )
-        else:
-            model_output = ModelOutput(
+        return (
+            ModelOutput(text="**GPU OutOfMemory, Please Refresh.**", error_code=0)
+            if _torch_imported and isinstance(e, torch.cuda.CudaError)
+            else ModelOutput(
                 text=f"**LLMServer Generate Error, Please CheckErrorInfo.**: {e}",
                 error_code=0,
             )
-        return model_output
+        )

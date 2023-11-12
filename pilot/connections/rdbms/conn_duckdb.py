@@ -27,12 +27,12 @@ class DuckDbConnect(RDBMSDatabase):
     ) -> RDBMSDatabase:
         """Construct a SQLAlchemy engine from URI."""
         _engine_args = engine_args or {}
-        return cls(create_engine("duckdb:///" + file_path, **_engine_args), **kwargs)
+        return cls(create_engine(f"duckdb:///{file_path}", **_engine_args), **kwargs)
 
     def get_users(self):
         cursor = self.session.execute(
             text(
-                f"SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'duckdb_sys_users';"
+                "SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'duckdb_sys_users';"
             )
         )
         users = cursor.fetchall()
@@ -51,7 +51,7 @@ class DuckDbConnect(RDBMSDatabase):
     def get_table_comments(self, db_name):
         cursor = self.session.execute(
             text(
-                f"""
+                """
                 SELECT name, sql FROM sqlite_master WHERE type='table'
                 """
             )
@@ -62,7 +62,7 @@ class DuckDbConnect(RDBMSDatabase):
         ]
 
     def table_simple_info(self) -> Iterable[str]:
-        _tables_sql = f"""
+        _tables_sql = """
                 SELECT name FROM sqlite_master WHERE type='table'
             """
         cursor = self.session.execute(text(_tables_sql))
@@ -96,11 +96,11 @@ if __name__ == "__main__":
         .fetchall()
     )
 
-    print(str(results))
+    print(results)
 
     fields = []
-    results2 = engine.connect().execute(f"""PRAGMA  table_info(user)""").fetchall()
+    results2 = engine.connect().execute("""PRAGMA  table_info(user)""").fetchall()
     for row_col in results2:
         field_info = list(row_col)
         fields.append(field_info[1])
-    print(str(fields))
+    print(fields)

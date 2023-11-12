@@ -45,7 +45,7 @@ class SparkConnect(BaseConnect):
             return cls(file_path=file_path, engine_args=engine_args)
 
         except Exception as e:
-            print("load spark datasource error" + str(e))
+            print(f"load spark datasource error{str(e)}")
 
     def create_df(self, path):
         """Create a Spark DataFrame from Datasource path(now support parquet, jdbc, orc, libsvm, csv, text, json.).
@@ -65,8 +65,7 @@ class SparkConnect(BaseConnect):
         df = self.spark_session.sql(sql)
         first_row = df.first()
         rows = [first_row.asDict().keys()]
-        for row in df.collect():
-            rows.append(row)
+        rows.extend(iter(df.collect()))
         return rows
 
     def query_ex(self, sql):

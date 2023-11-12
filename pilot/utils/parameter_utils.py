@@ -40,10 +40,8 @@ class BaseParameters:
         all_field_names = {f.name for f in fields(cls)}
         if ignore_extra_fields:
             data = {key: value for key, value in data.items() if key in all_field_names}
-        else:
-            extra_fields = set(data.keys()) - all_field_names
-            if extra_fields:
-                raise TypeError(f"Unexpected fields: {', '.join(extra_fields)}")
+        elif extra_fields := set(data.keys()) - all_field_names:
+            raise TypeError(f"Unexpected fields: {', '.join(extra_fields)}")
         return cls(**data)
 
     def update_from(self, source: Union["BaseParameters", dict]) -> bool:
@@ -58,31 +56,30 @@ class BaseParameters:
             bool: True if at least one field was updated, otherwise False.
         """
         updated = False  # Flag to indicate whether any field was updated
-        if isinstance(source, (BaseParameters, dict)):
-            for field_info in fields(self):
-                # Check if the field has a "fixed" tag in metadata
-                tags = field_info.metadata.get("tags")
-                tags = [] if not tags else tags.split(",")
-                if tags and "fixed" in tags:
-                    continue  # skip this field
-                # Get the new value from source (either another BaseParameters object or a dict)
-                new_value = (
-                    getattr(source, field_info.name)
-                    if isinstance(source, BaseParameters)
-                    else source.get(field_info.name, None)
-                )
-
-                # If the new value is not None and different from the current value, update the field and set the flag
-                if new_value is not None and new_value != getattr(
-                    self, field_info.name
-                ):
-                    setattr(self, field_info.name, new_value)
-                    updated = True
-        else:
+        if not isinstance(source, (BaseParameters, dict)):
             raise ValueError(
                 "Source must be an instance of BaseParameters (or its derived class) or a dictionary."
             )
 
+        for field_info in fields(self):
+            # Check if the field has a "fixed" tag in metadata
+            tags = field_info.metadata.get("tags")
+            tags = [] if not tags else tags.split(",")
+            if tags and "fixed" in tags:
+                continue  # skip this field
+            # Get the new value from source (either another BaseParameters object or a dict)
+            new_value = (
+                getattr(source, field_info.name)
+                if isinstance(source, BaseParameters)
+                else source.get(field_info.name, None)
+            )
+
+            # If the new value is not None and different from the current value, update the field and set the flag
+            if new_value is not None and new_value != getattr(
+                self, field_info.name
+            ):
+                setattr(self, field_info.name, new_value)
+                updated = True
         return updated
 
     def __str__(self) -> str:
@@ -127,8 +124,7 @@ def _dict_to_command_args(obj: Dict, args_prefix: str = "--") -> List[str]:
     for key, value in obj.items():
         if value is None:
             continue
-        args.append(f"{args_prefix}{key}")
-        args.append(str(value))
+        args.extend((f"{args_prefix}{key}", str(value)))
     return args
 
 
@@ -162,9 +158,7 @@ def _get_simple_privacy_field_value(obj, field_info):
     """
     tags = field_info.metadata.get("tags")
     tags = [] if not tags else tags.split(",")
-    is_privacy = False
-    if tags and "privacy" in tags:
-        is_privacy = True
+    is_privacy = bool(tags and "privacy" in tags)
     value = getattr(obj, field_info.name)
     if not is_privacy or not value:
         return value
@@ -176,9 +170,7 @@ def _get_simple_privacy_field_value(obj, field_info):
     if field_type is bool:
         return False
     # str
-    if len(value) > 5:
-        return value[0] + "******" + value[-1]
-    return "******"
+    return f"{value[0]}******{value[-1]}" if len(value) > 5 else "******"
 
 
 def _genenv_ignoring_key_case(env_key: str, env_prefix: str = None, default_value=None):
@@ -195,8 +187,7 @@ def _genenv_ignoring_key_case_with_prefixes(
 ) -> str:
     if env_prefixes:
         for env_prefix in env_prefixes:
-            env_var_value = _genenv_ignoring_key_case(env_key, env_prefix)
-            if env_var_value:
+            if env_var_value := _genenv_ignoring_key_case(env_key, env_prefix):
                 return env_var_value
     return _genenv_ignoring_key_case(env_key, default_value=default_value)
 
@@ -207,7 +198,7 @@ class EnvArgumentParser:
         if not env_key:
             return None
         env_key = env_key.replace("-", "_")
-        return env_key + "_"
+        return f"{env_key}_"
 
     def parse_args_into_dataclass(
         self,
@@ -230,9 +221,7 @@ class EnvArgumentParser:
                     env_var_value = float(env_var_value)
                 elif field.type is bool or field.type == Optional[bool]:
                     env_var_value = env_var_value.lower() == "true"
-                elif field.type is str or field.type == Optional[str]:
-                    pass
-                else:
+                elif field.type is not str and field.type != Optional[str]:
                     raise ValueError(f"Unsupported parameter type {field.type}")
             if not env_var_value:
                 env_var_value = kwargs.get(field.name)
@@ -345,15 +334,12 @@ class EnvArgumentParser:
         combined_fields = _merge_dataclass_types(
             *dataclass_types, _dynamic_factory=_dynamic_factory
         )
-        options = []
-
-        for field_name, field in reversed(combined_fields.items()):
-            options.append(
-                EnvArgumentParser._create_click_option_from_field(
-                    field_name, field, is_func=False
-                )
+        return [
+            EnvArgumentParser._create_click_option_from_field(
+                field_name, field, is_func=False
             )
-        return options
+            for field_name, field in reversed(combined_fields.items())
+        ]
 
     @staticmethod
     def create_argparse_option(
@@ -444,7 +430,7 @@ class EnvArgumentParser:
                 if value.lower() in ["true", "1"]:
                     # Flag args
                     env_args.append(arg_key)
-                elif not value.lower() in ["false", "0"]:
+                elif value.lower() not in ["false", "0"]:
                     env_args.extend([arg_key, value])
         return env_args
 
@@ -454,8 +440,7 @@ def _merge_dataclass_types(
 ) -> OrderedDict:
     combined_fields = OrderedDict()
     if _dynamic_factory:
-        _types = _dynamic_factory()
-        if _types:
+        if _types := _dynamic_factory():
             dataclass_types = list(_types)
     for dataclass_type in dataclass_types:
         for field in fields(dataclass_type):
@@ -507,8 +492,9 @@ def _build_parameter_class(desc: List[ParameterDescription]) -> Type:
         raise ValueError("Parameter descriptions cant be empty")
     param_class_str = desc[0].param_class
     if param_class_str:
-        param_class = import_from_string(param_class_str, ignore_import_error=True)
-        if param_class:
+        if param_class := import_from_string(
+            param_class_str, ignore_import_error=True
+        ):
             return param_class
     module_name, _, class_name = param_class_str.rpartition(".")
 
@@ -529,9 +515,7 @@ def _build_parameter_class(desc: List[ParameterDescription]) -> Type:
     new_class = type(
         class_name, (object,), {**fields_dict, "__annotations__": annotations}
     )
-    result_class = dataclass(new_class)  # Make it a dataclass
-
-    return result_class
+    return dataclass(new_class)
 
 
 def _extract_parameter_details(
@@ -608,9 +592,7 @@ def _get_dict_from_obj(obj, default_value=None) -> Optional[Dict]:
             value = _get_simple_privacy_field_value(obj, field_info)
             params[field_info.name] = value
         return params
-    if isinstance(obj, dict):
-        return obj
-    return default_value
+    return obj if isinstance(obj, dict) else default_value
 
 
 class _SimpleArgParser:
@@ -620,20 +602,16 @@ class _SimpleArgParser:
     def parse(self, args=None):
         import sys
 
-        if args is None:
-            args = sys.argv[1:]
-        else:
-            args = list(args)
+        args = sys.argv[1:] if args is None else list(args)
         prev_arg = None
         for arg in args:
             if arg.startswith("--"):
                 if prev_arg:
                     self.params[prev_arg] = None
                 prev_arg = arg[2:]
-            else:
-                if prev_arg:
-                    self.params[prev_arg] = arg
-                    prev_arg = None
+            elif prev_arg:
+                self.params[prev_arg] = arg
+                prev_arg = None
 
         if prev_arg:
             self.params[prev_arg] = None

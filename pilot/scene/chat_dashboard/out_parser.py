@@ -27,15 +27,15 @@ class ChatDashboardOutputParser(BaseOutputParser):
         chart_items: List[ChartItem] = []
         if not isinstance(response, list):
             response = [response]
-        for item in response:
-            chart_items.append(
-                ChartItem(
-                    item["sql"].replace("\\", " "),
-                    item["title"],
-                    item["thoughts"],
-                    item["showcase"],
-                )
+        chart_items.extend(
+            ChartItem(
+                item["sql"].replace("\\", " "),
+                item["title"],
+                item["thoughts"],
+                item["showcase"],
             )
+            for item in response
+        )
         return chart_items
 
     def parse_view_response(self, speak, data) -> str:

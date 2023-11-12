@@ -53,11 +53,11 @@ class NewCSVLoader(BaseLoader):
         with open(self.file_path, newline="", encoding=self.encoding) as csvfile:
             csv_reader = csv.DictReader(csvfile, **self.csv_args)  # type: ignore
             for i, row in enumerate(csv_reader):
-                strs = []
-                for k, v in row.items():
-                    if k is None or v is None:
-                        continue
-                    strs.append(f"{k.strip()}: {v.strip()}")
+                strs = [
+                    f"{k.strip()}: {v.strip()}"
+                    for k, v in row.items()
+                    if k is not None and v is not None
+                ]
                 content = "\n".join(strs)
                 try:
                     source = (

@@ -114,13 +114,10 @@ class MilvusStore(VectorStoreBase):
                     self.fields.remove(x.name)
                 if x.is_primary:
                     self.primary_field = x.name
-                if (
-                    x.dtype == DataType.FLOAT_VECTOR
-                    or x.dtype == DataType.BINARY_VECTOR
-                ):
+                if x.dtype in [DataType.FLOAT_VECTOR, DataType.BINARY_VECTOR]:
                     self.vector_field = x.name
             return self._add_documents(texts, metadatas)
-            # return self.collection_name
+                # return self.collection_name
 
         dim = len(embeddings)
         # Generate unique names
@@ -133,14 +130,15 @@ class MilvusStore(VectorStoreBase):
         max_length = 0
         for y in texts:
             max_length = max(max_length, len(y))
-        # Create the text field
-        fields.append(FieldSchema(text_field, DataType.VARCHAR, max_length=65535))
-        # primary key field
-        fields.append(
-            FieldSchema(primary_field, DataType.INT64, is_primary=True, auto_id=True)
+        fields.extend(
+            (
+                FieldSchema(text_field, DataType.VARCHAR, max_length=65535),
+                FieldSchema(
+                    primary_field, DataType.INT64, is_primary=True, auto_id=True
+                ),
+                FieldSchema(vector_field, DataType.FLOAT_VECTOR, dim=dim),
+            )
         )
-        # vector field
-        fields.append(FieldSchema(vector_field, DataType.FLOAT_VECTOR, dim=dim))
         schema = CollectionSchema(fields)
         # Create the collection
         collection = Collection(collection_name, schema)
@@ -156,11 +154,9 @@ class MilvusStore(VectorStoreBase):
                 self.fields.remove(x.name)
             if x.is_primary:
                 self.primary_field = x.name
-            if x.dtype == DataType.FLOAT_VECTOR or x.dtype == DataType.BINARY_VECTOR:
+            if x.dtype in [DataType.FLOAT_VECTOR, DataType.BINARY_VECTOR]:
                 self.vector_field = x.name
-        ids = self._add_documents(texts, metadatas)
-
-        return ids
+        return self._add_documents(texts, metadatas)
 
     # def init_schema(self) -> None:
     #     """Initialize collection in milvus database."""
@@ -258,8 +254,7 @@ class MilvusStore(VectorStoreBase):
         doc_ids = []
         for doc_batch in batched_list:
             doc_ids.extend(self.init_schema_and_load(self.collection_name, doc_batch))
-        doc_ids = [str(doc_id) for doc_id in doc_ids]
-        return doc_ids
+        return [str(doc_id) for doc_id in doc_ids]
 
     def similar_search(self, text, topk) -> None:
         from pymilvus import Collection, DataType
@@ -273,7 +268,7 @@ class MilvusStore(VectorStoreBase):
                 self.fields.remove(x.name)
             if x.is_primary:
                 self.primary_field = x.name
-            if x.dtype == DataType.FLOAT_VECTOR or x.dtype == DataType.BINARY_VECTOR:
+            if x.dtype in [DataType.FLOAT_VECTOR, DataType.BINARY_VECTOR]:
                 self.vector_field = x.name
         _, docs_and_scores = self._search(text, topk)
         return [doc for doc, _, _ in docs_and_scores]
@@ -346,7 +341,7 @@ class MilvusStore(VectorStoreBase):
 
         self.col = Collection(self.collection_name)
         """milvus delete vectors by ids"""
-        logger.info(f"begin delete milvus ids...")
+        logger.info("begin delete milvus ids...")
         delete_ids = ids.split(",")
         doc_ids = [int(doc_id) for doc_id in delete_ids]
         delet_expr = f"{self.primary_field} in {doc_ids}"

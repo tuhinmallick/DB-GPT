@@ -27,11 +27,10 @@ def storage(system_app: SystemApp):
 def tracer(request, system_app: SystemApp):
     if not request or not hasattr(request, "param"):
         return DefaultTracer(system_app)
-    else:
-        span_storage_type = request.param.get(
-            "span_storage_type", SpanStorageType.ON_CREATE_END
-        )
-        return DefaultTracer(system_app, span_storage_type=span_storage_type)
+    span_storage_type = request.param.get(
+        "span_storage_type", SpanStorageType.ON_CREATE_END
+    )
+    return DefaultTracer(system_app, span_storage_type=span_storage_type)
 
 
 @pytest.fixture

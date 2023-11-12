@@ -26,13 +26,11 @@ def storage(request):
     if file_does_not_exist:
         with tempfile.TemporaryDirectory() as tmp_dir:
             filename = os.path.join(tmp_dir, "non_existent_file.jsonl")
-            storage_instance = FileSpanStorage(filename)
-            yield storage_instance
+            yield FileSpanStorage(filename)
     else:
         with tempfile.NamedTemporaryFile(delete=True) as tmp_file:
             filename = tmp_file.name
-            storage_instance = FileSpanStorage(filename)
-            yield storage_instance
+            yield FileSpanStorage(filename)
 
 
 @pytest.fixture
@@ -43,10 +41,9 @@ def storage_container(request):
     else:
         batch_size = request.param.get("batch_size", 10)
         flush_interval = request.param.get("flush_interval", 10)
-    storage_container = SpanStorageContainer(
+    yield SpanStorageContainer(
         batch_size=batch_size, flush_interval=flush_interval
     )
-    yield storage_container
 
 
 def read_spans_from_file(filename):

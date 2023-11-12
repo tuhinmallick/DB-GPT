@@ -34,8 +34,7 @@ class EmbeddingsModelWorker(ModelWorker):
         self._loader = EmbeddingLoader()
 
     def load_worker(self, model_name: str, model_path: str, **kwargs) -> None:
-        if model_path.endswith("/"):
-            model_path = model_path[:-1]
+        model_path = model_path.removesuffix("/")
         model_path = _get_model_real_path(model_name, model_path)
 
         self.model_name = model_name

@@ -37,22 +37,13 @@ def zhipu_generate_stream(
     for message in messages:
         if message.role == ModelMessageRoleType.SYSTEM:
             history.append({"role": "user", "content": message.content})
-        # elif message.role == ModelMessageRoleType.HUMAN:
-        #     history.append({"role": "user", "content": message.content})
         elif message.role == ModelMessageRoleType.AI:
             history.append({"role": "assistant", "content": message.content})
-        else:
-            pass
-
     # temp_his = history[::-1]
     temp_his = history
-    last_user_input = None
-    for m in temp_his:
-        if m["role"] == "user":
-            last_user_input = m
-            break
-
-    if last_user_input:
+    if last_user_input := next(
+        (m for m in temp_his if m["role"] == "user"), None
+    ):
         history.remove(last_user_input)
         history.append(last_user_input)
 

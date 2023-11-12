@@ -39,10 +39,7 @@ class DBType(Enum):
 
     @staticmethod
     def of_db_type(db_type: str):
-        for item in DBType:
-            if item.value() == db_type:
-                return item
-        return None
+        return next((item for item in DBType if item.value() == db_type), None)
 
     @staticmethod
     def parse_file_db_name_from_path(db_type: str, local_db_path: str):
@@ -51,4 +48,4 @@ class DBType(Enum):
         db_name = os.path.splitext(base_name)[0]
         if "." in db_name:
             db_name = os.path.splitext(db_name)[0]
-        return db_type + "_" + db_name
+        return f"{db_type}_{db_name}"

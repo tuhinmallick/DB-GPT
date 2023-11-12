@@ -75,17 +75,15 @@ class ChatDashboard(BaseChat):
             # )
             print("dashboard vector find tables:{}", table_infos)
         except Exception as e:
-            print("db summary find error!" + str(e))
+            print(f"db summary find error!{str(e)}")
 
-        input_values = {
+        return {
             "input": self.current_user_input,
             "dialect": self.database.dialect,
             "table_info": self.database.table_simple_info(),
             "supported_chat_type": self.dashboard_template["supported_chart_type"]
             # "table_info": client.get_similar_tables(dbname=self.db_name, query=self.current_user_input, topk=self.top_k)
         }
-
-        return input_values
 
     def do_action(self, prompt_response):
         ### TODO 记录整体信息，处理成功的，和未成功的分开记录处理
@@ -109,7 +107,7 @@ class ChatDashboard(BaseChat):
                 )
             except Exception as e:
                 # TODO 修复流程
-                print(str(e))
+                print(e)
         return ReportData(
             conv_uid=self.chat_session_id,
             template_name=self.report_name,

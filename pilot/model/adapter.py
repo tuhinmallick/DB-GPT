@@ -170,7 +170,6 @@ class ChatGLMAdapater(BaseLLMAdaper):
             model = AutoModel.from_pretrained(
                 model_path, trust_remote_code=True, **from_pretrained_kwargs
             ).float()
-            return model, tokenizer
         else:
             device_map = None
             num_gpus = torch.cuda.device_count()
@@ -187,7 +186,8 @@ class ChatGLMAdapater(BaseLLMAdaper):
 
             model = dispatch_model(model, device_map=device_map)
 
-            return model, tokenizer
+
+        return model, tokenizer
 
 
 class GuanacoAdapter(BaseLLMAdaper):
@@ -383,7 +383,7 @@ class LlamaCppAdapater(BaseLLMAdaper):
         """
         https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML
         """
-        if "llama-cpp" == model_path:
+        if model_path == "llama-cpp":
             return True
         is_match, _ = LlamaCppAdapater._parse_model_path(model_path)
         return is_match

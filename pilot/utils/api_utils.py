@@ -75,9 +75,8 @@ def _api_remote(path, method="GET"):
                     return _parse_response(
                         response.json(), return_type, actual_dataclass
                     )
-                else:
-                    error_msg = f"Remote request error, error code: {response.status_code}, error msg: {response.text}"
-                    raise Exception(error_msg)
+                error_msg = f"Remote request error, error code: {response.status_code}, error msg: {response.text}"
+                raise Exception(error_msg)
 
         return wrapper
 
@@ -97,9 +96,8 @@ def _sync_api_remote(path, method="GET"):
 
             if response.status_code == 200:
                 return _parse_response(response.json(), return_type, actual_dataclass)
-            else:
-                error_msg = f"Remote request error, error code: {response.status_code}, error msg: {response.text}"
-                raise Exception(error_msg)
+            error_msg = f"Remote request error, error code: {response.status_code}, error msg: {response.text}"
+            raise Exception(error_msg)
 
         return wrapper
 
@@ -107,21 +105,18 @@ def _sync_api_remote(path, method="GET"):
 
 
 def _parse_response(json_response, return_type, actual_dataclass):
-    # print(f'return_type.__origin__: {return_type.__origin__}, actual_dataclass: {actual_dataclass}, json_response: {json_response}')
-    if is_dataclass(actual_dataclass):
-        if return_type.__origin__ is list:  # for List[dataclass]
-            if isinstance(json_response, list):
-                return [actual_dataclass(**item) for item in json_response]
-            else:
-                raise TypeError(
-                    f"Expected list in response but got {type(json_response)}"
-                )
-        else:
-            if isinstance(json_response, dict):
-                return actual_dataclass(**json_response)
-            else:
-                raise TypeError(
-                    f"Expected dictionary in response but got {type(json_response)}"
-                )
-    else:
+    if not is_dataclass(actual_dataclass):
         return json_response
+    if return_type.__origin__ is list:  # for List[dataclass]
+        if isinstance(json_response, list):
+            return [actual_dataclass(**item) for item in json_response]
+        else:
+            raise TypeError(
+                f"Expected list in response but got {type(json_response)}"
+            )
+    elif isinstance(json_response, dict):
+        return actual_dataclass(**json_response)
+    else:
+        raise TypeError(
+            f"Expected dictionary in response but got {type(json_response)}"
+        )

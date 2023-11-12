@@ -21,5 +21,4 @@ class BaseDao(Generic[T]):
 
     def get_session(self):
         Session = sessionmaker(autocommit=False, autoflush=False, bind=self._db_engine)
-        session = Session()
-        return session
+        return Session()

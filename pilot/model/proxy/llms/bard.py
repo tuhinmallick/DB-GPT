@@ -22,24 +22,14 @@ def bard_generate_stream(
             history.append({"role": "system", "content": message.content})
         elif message.role == ModelMessageRoleType.AI:
             history.append({"role": "assistant", "content": message.content})
-        else:
-            pass
-
     temp_his = history[::-1]
-    last_user_input = None
-    for m in temp_his:
-        if m["role"] == "user":
-            last_user_input = m
-            break
-    if last_user_input:
+    if last_user_input := next(
+        (m for m in temp_his if m["role"] == "user"), None
+    ):
         history.remove(last_user_input)
         history.append(last_user_input)
 
-    msgs = []
-    for msg in history:
-        if msg.get("content"):
-            msgs.append(msg["content"])
-
+    msgs = [msg["content"] for msg in history if msg.get("content")]
     if proxy_server_url is not None:
         headers = {"Content-Type": "application/json"}
         payloads = {"input": "\n".join(msgs)}

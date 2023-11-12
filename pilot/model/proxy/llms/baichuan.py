@@ -14,14 +14,12 @@ def _calculate_md5(text: str) -> str:
     """Calculate md5"""
     md5 = hashlib.md5()
     md5.update(text.encode("utf-8"))
-    encrypted = md5.hexdigest()
-    return encrypted
+    return md5.hexdigest()
 
 
 def _sign(data: dict, secret_key: str, timestamp: str):
     data_str = json.dumps(data)
-    signature = _calculate_md5(secret_key + data_str + timestamp)
-    return signature
+    return _calculate_md5(secret_key + data_str + timestamp)
 
 
 def baichuan_generate_stream(
@@ -44,9 +42,6 @@ def baichuan_generate_stream(
             history.append({"role": "system", "content": message.content})
         elif message.role == ModelMessageRoleType.AI:
             history.append({"role": "assistant", "content": "message.content"})
-        else:
-            pass
-
     payload = {
         "model": model_name,
         "messages": history,
@@ -61,7 +56,7 @@ def baichuan_generate_stream(
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + proxy_api_key,
+        "Authorization": f"Bearer {proxy_api_key}",
         "X-BC-Request-Id": params.get("request_id") or "dbgpt",
         "X-BC-Timestamp": str(timestamp),
         "X-BC-Signature": _signature,
@@ -75,8 +70,7 @@ def baichuan_generate_stream(
     for line in res.iter_lines():
         if line:
             if not line.startswith(b"data: "):
-                error_message = line.decode("utf-8")
-                yield error_message
+                yield line.decode("utf-8")
             else:
                 json_data = line.split(b": ", 1)[1]
                 decoded_line = json_data.decode("utf-8")

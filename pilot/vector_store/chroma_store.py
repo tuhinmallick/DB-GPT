@@ -68,7 +68,7 @@ class ChromaStore(VectorStoreBase):
         return True
 
     def delete_by_ids(self, ids):
-        logger.info(f"begin delete chroma ids...")
+        logger.info("begin delete chroma ids...")
         collection = self.vector_store_client._collection
         collection.delete(ids=ids)
 

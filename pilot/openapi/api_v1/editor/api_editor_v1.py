@@ -69,8 +69,7 @@ async def get_editor_sql_rounds(con_uid: str):
     logger.info("get_editor_sql_rounds:{con_uid}")
     chat_history_fac = ChatHistory()
     history_mem = chat_history_fac.get_store_instance(con_uid)
-    history_messages: List[OnceConversation] = history_mem.get_messages()
-    if history_messages:
+    if history_messages := history_mem.get_messages():
         result: List = []
         for once in history_messages:
             round_name: str = ""
@@ -92,8 +91,7 @@ async def get_editor_sql(con_uid: str, round: int):
     logger.info(f"get_editor_sql:{con_uid},{round}")
     chat_history_fac = ChatHistory()
     history_mem = chat_history_fac.get_store_instance(con_uid)
-    history_messages: List[OnceConversation] = history_mem.get_messages()
-    if history_messages:
+    if history_messages := history_mem.get_messages():
         for once in history_messages:
             if int(once["chat_order"]) == round:
                 for element in once["messages"]:
@@ -145,17 +143,15 @@ async def sql_editor_submit(sql_edit_context: ChatSqlEditContext = Body()):
 
     chat_history_fac = ChatHistory()
     history_mem = chat_history_fac.get_store_instance(sql_edit_context.con_uid)
-    history_messages: List[OnceConversation] = history_mem.get_messages()
-    if history_messages:
+    if history_messages := history_mem.get_messages():
         conn = CFG.LOCAL_DB_MANAGE.get_connect(sql_edit_context.db_name)
 
-        edit_round = list(
+        if edit_round := list(
             filter(
                 lambda x: x["chat_order"] == sql_edit_context.conv_round,
                 history_messages,
             )
-        )[0]
-        if edit_round:
+        )[0]:
             for element in edit_round["messages"]:
                 if element["type"] == "ai":
                     db_resp = json.loads(element["data"]["content"])
@@ -179,8 +175,7 @@ async def get_editor_chart_list(con_uid: str):
     )
     chat_history_fac = ChatHistory()
     history_mem = chat_history_fac.get_store_instance(con_uid)
-    history_messages: List[OnceConversation] = history_mem.get_messages()
-    if history_messages:
+    if history_messages := history_mem.get_messages():
         last_round = max(history_messages, key=lambda x: x["chat_order"])
         db_name = last_round["param_value"]
         for element in last_round["messages"]:
@@ -202,8 +197,7 @@ async def get_editor_chart_info(param: dict = Body()):
 
     chat_history_fac = ChatHistory()
     history_mem = chat_history_fac.get_store_instance(conv_uid)
-    history_messages: List[OnceConversation] = history_mem.get_messages()
-    if history_messages:
+    if history_messages := history_mem.get_messages():
         last_round = max(history_messages, key=lambda x: x["chat_order"])
         db_name = last_round["param_value"]
         if not db_name:
@@ -280,13 +274,11 @@ async def chart_editor_submit(chart_edit_context: ChatChartEditContext = Body())
 
     chat_history_fac = ChatHistory()
     history_mem = chat_history_fac.get_store_instance(chart_edit_context.con_uid)
-    history_messages: List[OnceConversation] = history_mem.get_messages()
-    if history_messages:
+    if history_messages := history_mem.get_messages():
         dashboard_data_loader: DashboardDataLoader = DashboardDataLoader()
         db_conn = CFG.LOCAL_DB_MANAGE.get_connect(chart_edit_context.db_name)
 
-        edit_round = max(history_messages, key=lambda x: x["chat_order"])
-        if edit_round:
+        if edit_round := max(history_messages, key=lambda x: x["chat_order"]):
             try:
                 for element in edit_round["messages"]:
                     if element["type"] == "view":

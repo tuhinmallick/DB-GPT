@@ -34,11 +34,10 @@ class InnerChatDBSummary(BaseChat):
 
     @trace()
     async def generate_input_values(self) -> Dict:
-        input_values = {
+        return {
             "db_input": self.db_input,
             "db_profile_summary": self.db_summary,
         }
-        return input_values
 
     @property
     def chat_type(self) -> str:

@@ -53,10 +53,11 @@ def _get_model_real_path(model_name, default_model_path) -> str:
     2. environment variable with key: model_path
     3. default_model_path
     """
-    env_prefix = model_name + "_"
+    env_prefix = f"{model_name}_"
     env_prefix = env_prefix.replace("-", "_")
-    env_model_path = _genenv_ignoring_key_case("model_path", env_prefix=env_prefix)
-    if env_model_path:
+    if env_model_path := _genenv_ignoring_key_case(
+        "model_path", env_prefix=env_prefix
+    ):
         return env_model_path
     return _genenv_ignoring_key_case("model_path", default_value=default_model_path)
 
@@ -91,7 +92,7 @@ class ModelLoader:
         args_parser = EnvArgumentParser()
         # Read the parameters of the model from the environment variable according to the model name prefix, which currently has the highest priority
         # vicuna_13b_max_gpu_memory=13Gib or VICUNA_13B_MAX_GPU_MEMORY=13Gib
-        env_prefix = self.model_name + "_"
+        env_prefix = f"{self.model_name}_"
         env_prefix = env_prefix.replace("-", "_")
         model_params = args_parser.parse_args_into_dataclass(
             param_cls,
@@ -150,7 +151,8 @@ def huggingface_loader(llm_adapter: LLMModelAdaper, model_params: ModelParameter
         num_gpus = torch.cuda.device_count()
         available_gpu_memory = get_gpu_memory(num_gpus)
         max_memory = {
-            i: str(int(available_gpu_memory[i] * 0.85)) + "GiB" for i in range(num_gpus)
+            i: f"{int(available_gpu_memory[i] * 0.85)}GiB"
+            for i in range(num_gpus)
         }
         if num_gpus != 1:
             kwargs["device_map"] = "auto"
@@ -159,9 +161,7 @@ def huggingface_loader(llm_adapter: LLMModelAdaper, model_params: ModelParameter
                     f"There has max_gpu_memory from config: {model_params.max_gpu_memory}"
                 )
                 max_memory = {i: model_params.max_gpu_memory for i in range(num_gpus)}
-                kwargs["max_memory"] = max_memory
-            else:
-                kwargs["max_memory"] = max_memory
+            kwargs["max_memory"] = max_memory
         logger.debug(f"max_memory: {max_memory}")
 
     elif device == "mps":
@@ -199,9 +199,7 @@ def huggingface_loader(llm_adapter: LLMModelAdaper, model_params: ModelParameter
     ):
         try:
             model.to(device)
-        except ValueError:
-            pass
-        except AttributeError:
+        except (ValueError, AttributeError):
             pass
     if model_params.verbose:
         print(model)
@@ -238,15 +236,12 @@ def load_huggingface_quantization_model(
         ) from exc
     if (
         "llama-2" in model_params.model_name.lower()
-        and not transformers.__version__ >= "4.31.0"
+        and transformers.__version__ < "4.31.0"
     ):
         raise ValueError(
             "Llama-2 quantization require transformers.__version__>=4.31.0"
         )
-    params = {"low_cpu_mem_usage": True}
-    params["low_cpu_mem_usage"] = True
-    params["device_map"] = "auto"
-
+    params = {"low_cpu_mem_usage": True, "device_map": "auto"}
     torch_dtype = kwargs.get("torch_dtype")
 
     if model_params.load_4bit:
@@ -256,7 +251,7 @@ def load_huggingface_quantization_model(
             "float16",
             "float32",
         ]:
-            compute_dtype = eval("torch.{}".format(model_params.compute_dtype))
+            compute_dtype = eval(f"torch.{model_params.compute_dtype}")
 
         quantization_config_params = {
             "load_in_4bit": True,
@@ -264,9 +259,7 @@ def load_huggingface_quantization_model(
             "bnb_4bit_quant_type": model_params.quant_type,
             "bnb_4bit_use_double_quant": model_params.use_double_quant,
         }
-        logger.warn(
-            "Using the following 4-bit params: " + str(quantization_config_params)
-        )
+        logger.warn(f"Using the following 4-bit params: {quantization_config_params}")
         params["quantization_config"] = BitsAndBytesConfig(**quantization_config_params)
     elif model_params.load_8bit and max_memory:
         params["quantization_config"] = BitsAndBytesConfig(
@@ -318,7 +311,7 @@ def load_huggingface_quantization_model(
     # Loading the tokenizer
     if type(model) is LlamaForCausalLM:
         logger.info(
-            f"Current model is type of: LlamaForCausalLM, load tokenizer by LlamaTokenizer"
+            "Current model is type of: LlamaForCausalLM, load tokenizer by LlamaTokenizer"
         )
         tokenizer = LlamaTokenizer.from_pretrained(
             model_params.model_path, clean_up_tokenization_spaces=True
@@ -333,7 +326,7 @@ def load_huggingface_quantization_model(
             logger.warn(f"{str(e)}")
     else:
         logger.info(
-            f"Current model type is not LlamaForCausalLM, load tokenizer by AutoTokenizer"
+            "Current model type is not LlamaForCausalLM, load tokenizer by AutoTokenizer"
         )
         tokenizer = AutoTokenizer.from_pretrained(
             model_params.model_path,

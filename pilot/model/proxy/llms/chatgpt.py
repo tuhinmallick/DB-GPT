@@ -47,14 +47,12 @@ def _initialize_openai(params: ProxyModelParameters):
     if params.http_proxy:
         openai.proxy = params.http_proxy
 
-    openai_params = {
+    return {
         "api_type": api_type,
         "api_base": api_base,
         "api_version": api_version,
         "proxy": params.http_proxy,
     }
-
-    return openai_params
 
 
 def _build_request(model: ProxyModel, params):
@@ -74,17 +72,11 @@ def _build_request(model: ProxyModel, params):
             history.append({"role": "system", "content": message.content})
         elif message.role == ModelMessageRoleType.AI:
             history.append({"role": "assistant", "content": message.content})
-        else:
-            pass
-
     # Move the last user's information to the end
     temp_his = history[::-1]
-    last_user_input = None
-    for m in temp_his:
-        if m["role"] == "user":
-            last_user_input = m
-            break
-    if last_user_input:
+    if last_user_input := next(
+        (m for m in temp_his if m["role"] == "user"), None
+    ):
         history.remove(last_user_input)
         history.append(last_user_input)
 

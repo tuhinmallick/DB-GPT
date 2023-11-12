@@ -25,7 +25,7 @@ class VectorStoreConnector:
         if self._match(vector_store_type):
             self.connector_class = connector.get(vector_store_type)
         else:
-            raise Exception(f"Vector Type Not support. {0}", vector_store_type)
+            raise Exception('Vector Type Not support. 0', vector_store_type)
 
         print(self.connector_class)
         self.client = self.connector_class(ctx)
@@ -61,10 +61,7 @@ class VectorStoreConnector:
         return self.client.delete_by_ids(ids=ids)
 
     def _match(self, vector_store_type) -> bool:
-        if connector.get(vector_store_type):
-            return True
-        else:
-            return False
+        return bool(connector.get(vector_store_type))
 
     def _register(self):
         for cls in vector_store.__all__:

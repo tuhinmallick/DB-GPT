@@ -98,12 +98,11 @@ class RAGGraphEngine:
             "model_name": self.model_name,
         }
         loop = utils.get_or_create_event_loop()
-        triplets = loop.run_until_complete(
+        return loop.run_until_complete(
             llm_chat_response_nostream(
                 ChatScene.ExtractTriplet.value(), **{"chat_param": chat_param}
             )
         )
-        return triplets
 
     def _build_index_from_docs(self, documents: List[Document]) -> KG:
         """Build the index from nodes.

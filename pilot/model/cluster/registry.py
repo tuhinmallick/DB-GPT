@@ -102,9 +102,7 @@ class ModelRegistry(BaseComponent, ABC):
         """
         instances = await self.get_all_instances(model_name, healthy_only=True)
         instances = [i for i in instances if i.enabled]
-        if not instances:
-            return None
-        return random.choice(instances)
+        return None if not instances else random.choice(instances)
 
     @abstractmethod
     async def send_heartbeat(self, instance: ModelInstance) -> bool:

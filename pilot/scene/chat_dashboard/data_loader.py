@@ -23,25 +23,19 @@ class DashboardDataLoader:
             values: List[ValueItem] = []
             data_map = {}
             field_map = {}
-            index = 0
-            for field_name in field_names:
-                data_map.update({f"{field_name}": [row[index] for row in datas]})
-                index += 1
-                if not data_map[field_name]:
-                    field_map.update({f"{field_name}": False})
-                else:
-                    field_map.update(
-                        {
-                            f"{field_name}": all(
-                                isinstance(item, (int, float, Decimal))
-                                for item in data_map[field_name]
-                            )
-                        }
+            for index, field_name in enumerate(field_names):
+                data_map[f"{field_name}"] = [row[index] for row in datas]
+                field_map[f"{field_name}"] = (
+                    False
+                    if not data_map[field_name]
+                    else all(
+                        isinstance(item, (int, float, Decimal))
+                        for item in data_map[field_name]
                     )
-
+                )
             for field_name in field_names[1:]:
                 if not field_map[field_name]:
-                    logger.info("More than 2 non-numeric column:" + field_name)
+                    logger.info(f"More than 2 non-numeric column:{field_name}")
                 else:
                     for data in datas:
                         value_item = ValueItem(
@@ -52,7 +46,7 @@ class DashboardDataLoader:
                         values.append(value_item)
             return field_names, values
         except Exception as e:
-            logger.debug("Prepare Chart Data Failed!" + str(e))
+            logger.debug(f"Prepare Chart Data Failed!{str(e)}")
             raise ValueError("Prepare Chart Data Failed!")
 
     def get_chart_values_by_db(self, db_name: str, chart_sql: str):

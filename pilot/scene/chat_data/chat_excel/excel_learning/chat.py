@@ -54,7 +54,6 @@ class ExcelLearning(BaseChat):
         copy_datas = datas.copy()
         datas.insert(0, colunms)
 
-        input_values = {
+        return {
             "data_example": json.dumps(copy_datas, cls=DateTimeEncoder),
         }
-        return input_values

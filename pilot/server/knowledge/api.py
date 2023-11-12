@@ -50,7 +50,7 @@ def space_add(request: KnowledgeSpaceRequest):
 
 @router.post("/knowledge/space/list")
 def space_list(request: KnowledgeSpaceRequest):
-    print(f"/space/list params:")
+    print("/space/list params:")
     try:
         return Result.succ(knowledge_space_service.get_knowledge_space(request))
     except Exception as e:
@@ -59,7 +59,7 @@ def space_list(request: KnowledgeSpaceRequest):
 
 @router.post("/knowledge/space/delete")
 def space_delete(request: KnowledgeSpaceRequest):
-    print(f"/space/delete params:")
+    print("/space/delete params:")
     try:
         return Result.succ(knowledge_space_service.delete_space(request.name))
     except Exception as e:
@@ -68,7 +68,7 @@ def space_delete(request: KnowledgeSpaceRequest):
 
 @router.post("/knowledge/{space_name}/arguments")
 def arguments(space_name: str):
-    print(f"/knowledge/space/arguments params:")
+    print("/knowledge/space/arguments params:")
     try:
         return Result.succ(knowledge_space_service.arguments(space_name))
     except Exception as e:
@@ -77,7 +77,7 @@ def arguments(space_name: str):
 
 @router.post("/knowledge/{space_name}/argument/save")
 def arguments_save(space_name: str, argument_request: SpaceArgumentRequest):
-    print(f"/knowledge/space/argument/save params:")
+    print("/knowledge/space/argument/save params:")
     try:
         return Result.succ(
             knowledge_space_service.argument_save(space_name, argument_request)
@@ -156,7 +156,7 @@ async def document_upload(
                 )
             )
             # return Result.succ([])
-        return Result.failed(code="E000X", msg=f"doc_file is None")
+        return Result.failed(code="E000X", msg="doc_file is None")
     except Exception as e:
         return Result.failed(code="E000X", msg=f"document add error {e}")
 

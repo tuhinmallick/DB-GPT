@@ -34,11 +34,7 @@ class ChatWithDbQA(BaseChat):
             self.db_connect = self.database.session
             self.tables = self.database.get_table_names()
 
-        self.top_k = (
-            CFG.KNOWLEDGE_SEARCH_TOP_SIZE
-            if len(self.tables) > CFG.KNOWLEDGE_SEARCH_TOP_SIZE
-            else len(self.tables)
-        )
+        self.top_k = min(len(self.tables), CFG.KNOWLEDGE_SEARCH_TOP_SIZE)
 
     @trace()
     async def generate_input_values(self) -> Dict:
@@ -62,7 +58,7 @@ class ChatWithDbQA(BaseChat):
                     self.top_k,
                 )
             except Exception as e:
-                print("db summary find error!" + str(e))
+                print(f"db summary find error!{str(e)}")
                 # table_infos = self.database.table_simple_info()
                 table_infos = await blocking_func_to_async(
                     self._executor, self.database.table_simple_info
@@ -71,10 +67,9 @@ class ChatWithDbQA(BaseChat):
             # table_infos = self.database.table_simple_info()
             dialect = self.database.dialect
 
-        input_values = {
+        return {
             "input": self.current_user_input,
             # "top_k": str(self.top_k),
             # "dialect": dialect,
             "table_info": table_infos,
         }
-        return input_values

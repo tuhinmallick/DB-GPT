@@ -88,10 +88,7 @@ class CommandRegistry:
                 reloaded_module.register(self)
 
     def is_valid_command(self, name: str) -> bool:
-        if name not in self.commands:
-            return False
-        else:
-            return True
+        return name in self.commands
 
     def get_command(self, name: str) -> Callable[..., Any]:
         return self.commands[name]
@@ -214,33 +211,27 @@ class ApiCall:
 
         if start_agent_count > 0:
             return True
-        else:
-            # 末尾新出字符检测
-            check_len = len(self.agent_prefix)
-            last_text = api_call_context[-check_len:]
-            for i in range(check_len):
-                text_tmp = last_text[-i:]
-                prefix_tmp = self.agent_prefix[:i]
-                if text_tmp == prefix_tmp:
-                    return True
-                else:
-                    i += 1
+        # 末尾新出字符检测
+        check_len = len(self.agent_prefix)
+        last_text = api_call_context[-check_len:]
+        for i in range(check_len):
+            text_tmp = last_text[-i:]
+            prefix_tmp = self.agent_prefix[:i]
+            if text_tmp == prefix_tmp:
+                return True
+            else:
+                i += 1
         return False
 
     def __check_last_plugin_call_ready(self, all_context):
         start_agent_count = all_context.count(self.agent_prefix)
         end_agent_count = all_context.count(self.agent_end)
 
-        if start_agent_count > 0 and start_agent_count == end_agent_count:
-            return True
-        return False
+        return start_agent_count > 0 and start_agent_count == end_agent_count
 
     def __deal_error_md_tags(self, all_context, api_context, include_end: bool = True):
         error_md_tags = ["```", "```python", "```xml", "```json", "```markdown"]
-        if include_end == False:
-            md_tag_end = ""
-        else:
-            md_tag_end = "```"
+        md_tag_end = "" if not include_end else "```"
         for tag in error_md_tags:
             all_context = all_context.replace(
                 tag + api_context + md_tag_end, api_context
@@ -249,7 +240,7 @@ class ApiCall:
                 tag + "\n" + api_context + "\n" + md_tag_end, api_context
             )
             all_context = all_context.replace(
-                tag + " " + api_context + " " + md_tag_end, api_context
+                f"{tag} {api_context} {md_tag_end}", api_context
             )
             all_context = all_context.replace(tag + api_context, api_context)
         return all_context
@@ -261,43 +252,7 @@ class ApiCall:
         )
         for api_index, api_context in call_context_map.items():
             api_status = self.plugin_status_map.get(api_context)
-            if api_status is not None:
-                if display_mode:
-                    if api_status.api_result:
-                        all_context = self.__deal_error_md_tags(
-                            all_context, api_context
-                        )
-                        all_context = all_context.replace(
-                            api_context, api_status.api_result
-                        )
-                    else:
-                        if api_status.status == Status.FAILED.value:
-                            all_context = self.__deal_error_md_tags(
-                                all_context, api_context
-                            )
-                            all_context = all_context.replace(
-                                api_context,
-                                f"""\n<span style=\"color:red\">ERROR!</span>{api_status.err_msg}\n """,
-                            )
-                        else:
-                            cost = (api_status.end_time - self.start_time) / 1000
-                            cost_str = "{:.2f}".format(cost)
-                            all_context = self.__deal_error_md_tags(
-                                all_context, api_context
-                            )
-                            all_context = all_context.replace(
-                                api_context,
-                                f'\n<span style="color:green">Waiting...{cost_str}S</span>\n',
-                            )
-                else:
-                    all_context = self.__deal_error_md_tags(
-                        all_context, api_context, False
-                    )
-                    all_context = all_context.replace(
-                        api_context, self.to_view_text(api_status)
-                    )
-
-            else:
+            if api_status is None:
                 # not ready api call view change
                 now_time = datetime.now().timestamp() * 1000
                 cost = (now_time - self.start_time) / 1000
@@ -307,6 +262,40 @@ class ApiCall:
                 all_context = all_context.replace(
                     api_context,
                     f'\n<span style="color:green">Waiting...{cost_str}S</span>\n',
+                )
+
+            elif display_mode:
+                if api_status.api_result:
+                    all_context = self.__deal_error_md_tags(
+                        all_context, api_context
+                    )
+                    all_context = all_context.replace(
+                        api_context, api_status.api_result
+                    )
+                elif api_status.status == Status.FAILED.value:
+                    all_context = self.__deal_error_md_tags(
+                        all_context, api_context
+                    )
+                    all_context = all_context.replace(
+                        api_context,
+                        f"""\n<span style=\"color:red\">ERROR!</span>{api_status.err_msg}\n """,
+                    )
+                else:
+                    cost = (api_status.end_time - self.start_time) / 1000
+                    all_context = self.__deal_error_md_tags(
+                        all_context, api_context
+                    )
+                    cost_str = "{:.2f}".format(cost)
+                    all_context = all_context.replace(
+                        api_context,
+                        f'\n<span style="color:green">Waiting...{cost_str}S</span>\n',
+                    )
+            else:
+                all_context = self.__deal_error_md_tags(
+                    all_context, api_context, False
+                )
+                all_context = all_context.replace(
+                    api_context, self.to_view_text(api_status)
                 )
 
         return all_context
@@ -321,11 +310,11 @@ class ApiCall:
             api_name = api_call_element.find("name").text
             if api_name.find("[") >= 0 or api_name.find("]") >= 0:
                 api_name = api_name.replace("[", "").replace("]", "")
-            api_args = {}
             args_elements = api_call_element.find("args")
-            for child_element in args_elements.iter():
-                api_args[child_element.tag] = child_element.text
-
+            api_args = {
+                child_element.tag: child_element.text
+                for child_element in args_elements.iter()
+            }
             api_status = self.plugin_status_map.get(api_context)
             if api_status is None:
                 api_status = PluginStatus(
@@ -386,8 +375,7 @@ class ApiCall:
                         value.status = Status.RUNNING.value
                         logging.info(f"sql展示执行:{value.name},{value.args}")
                         try:
-                            sql = value.args["sql"]
-                            if sql:
+                            if sql := value.args["sql"]:
                                 param = {
                                     "df": sql_run_func(sql),
                                 }

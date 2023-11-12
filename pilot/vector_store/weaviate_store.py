@@ -28,7 +28,7 @@ class WeaviateStore(VectorStoreBase):
         self.embedding = ctx.get("embeddings", None)
         self.vector_name = ctx["vector_store_name"]
         self.persist_dir = os.path.join(
-            KNOWLEDGE_UPLOAD_ROOT_PATH, self.vector_name + ".vectordb"
+            KNOWLEDGE_UPLOAD_ROOT_PATH, f"{self.vector_name}.vectordb"
         )
 
         self.vector_store_client = weaviate.Client(self.weaviate_url)
@@ -49,15 +49,13 @@ class WeaviateStore(VectorStoreBase):
             .with_limit(topk).do()
         )
         res = response["data"]["Get"][list(response["data"]["Get"].keys())[0]]
-        docs = []
-        for r in res:
-            docs.append(
-                Document(
-                    page_content=r["page_content"],
-                    metadata={"metadata": r["metadata"]},
-                )
+        return [
+            Document(
+                page_content=r["page_content"],
+                metadata={"metadata": r["metadata"]},
             )
-        return docs
+            for r in res
+        ]
 
     def vector_name_exists(self) -> bool:
         """Check if a vector name exists for a given class in Weaviate.
@@ -65,9 +63,7 @@ class WeaviateStore(VectorStoreBase):
             bool: True if the vector name exists, False otherwise.
         """
         try:
-            if self.vector_store_client.schema.get(self.vector_name):
-                return True
-            return False
+            return bool(self.vector_store_client.schema.get(self.vector_name))
         except Exception as e:
             logger.error("vector_name_exists error", e.message)
             return False

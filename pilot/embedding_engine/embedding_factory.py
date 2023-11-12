@@ -35,12 +35,11 @@ class DefaultEmbeddingFactory(EmbeddingFactory):
         if not model_name:
             model_name = self._default_model_name
 
-        new_kwargs = {k: v for k, v in self.kwargs.items()}
+        new_kwargs = dict(self.kwargs.items())
         new_kwargs["model_name"] = model_name
 
         if embedding_cls:
             return embedding_cls(**new_kwargs)
-        else:
-            from langchain.embeddings import HuggingFaceEmbeddings
+        from langchain.embeddings import HuggingFaceEmbeddings
 
-            return HuggingFaceEmbeddings(**new_kwargs)
+        return HuggingFaceEmbeddings(**new_kwargs)

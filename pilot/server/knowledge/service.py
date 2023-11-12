@@ -206,10 +206,7 @@ class KnowledgeService:
                 space=space_name,
             )
             doc = knowledge_document_dao.get_knowledge_documents(query)[0]
-            if (
-                doc.status == SyncStatus.RUNNING.name
-                or doc.status == SyncStatus.FINISHED.name
-            ):
+            if doc.status in [SyncStatus.RUNNING.name, SyncStatus.FINISHED.name]:
                 raise Exception(
                     f" doc:{doc.doc_name} status is {doc.status}, can not sync"
                 )
@@ -329,10 +326,11 @@ class KnowledgeService:
         if len(spaces) == 0:
             raise Exception(f"delete error, no space name:{space_name} in database")
         space = spaces[0]
-        vector_config = {}
-        vector_config["vector_store_name"] = space.name
-        vector_config["vector_store_type"] = CFG.VECTOR_STORE_TYPE
-        vector_config["chroma_persist_path"] = KNOWLEDGE_UPLOAD_ROOT_PATH
+        vector_config = {
+            "vector_store_name": space.name,
+            "vector_store_type": CFG.VECTOR_STORE_TYPE,
+            "chroma_persist_path": KNOWLEDGE_UPLOAD_ROOT_PATH,
+        }
         vector_client = VectorStoreConnector(
             vector_store_type=CFG.VECTOR_STORE_TYPE, ctx=vector_config
         )
@@ -360,10 +358,11 @@ class KnowledgeService:
             raise Exception(f"there are no or more than one document called {doc_name}")
         vector_ids = documents[0].vector_ids
         if vector_ids is not None:
-            vector_config = {}
-            vector_config["vector_store_name"] = space_name
-            vector_config["vector_store_type"] = CFG.VECTOR_STORE_TYPE
-            vector_config["chroma_persist_path"] = KNOWLEDGE_UPLOAD_ROOT_PATH
+            vector_config = {
+                "vector_store_name": space_name,
+                "vector_store_type": CFG.VECTOR_STORE_TYPE,
+                "chroma_persist_path": KNOWLEDGE_UPLOAD_ROOT_PATH,
+            }
             vector_client = VectorStoreConnector(
                 vector_store_type=CFG.VECTOR_STORE_TYPE, ctx=vector_config
             )
@@ -417,7 +416,7 @@ class KnowledgeService:
             doc.result = "document build graph success"
         except Exception as e:
             doc.status = SyncStatus.FAILED.name
-            doc.result = "document build graph failed" + str(e)
+            doc.result = f"document build graph failed{str(e)}"
             logger.error(f"document build graph failed:{doc.doc_name}, {str(e)}")
         return knowledge_document_dao.update_knowledge_document(doc)
 
@@ -465,7 +464,7 @@ class KnowledgeService:
             logger.info(f"async document embedding, success:{doc.doc_name}")
         except Exception as e:
             doc.status = SyncStatus.FAILED.name
-            doc.result = "document embedding failed" + str(e)
+            doc.result = f"document embedding failed{str(e)}"
             logger.error(f"document embedding, failed:{doc.doc_name}, {str(e)}")
         return knowledge_document_dao.update_knowledge_document(doc)
 
@@ -490,8 +489,7 @@ class KnowledgeService:
                 "template": _DEFAULT_TEMPLATE,
             },
         }
-        context_template_string = json.dumps(context_template, indent=4)
-        return context_template_string
+        return json.dumps(context_template, indent=4)
 
     def get_space_context(self, space_name):
         """get space contect
@@ -506,9 +504,7 @@ class KnowledgeService:
                 f"have not found {space_name} space or found more than one space called {space_name}"
             )
         space = spaces[0]
-        if space.context is not None:
-            return json.loads(spaces[0].context)
-        return None
+        return json.loads(space.context) if space.context is not None else None
 
     def _llm_extract_summary(self, doc: str):
         """Extract triplets from text by llm"""
@@ -544,35 +540,33 @@ class KnowledgeService:
         from pilot.common.chat_util import llm_chat_response_nostream
         import uuid
 
-        tasks = []
         max_iteration = 5
         if len(docs) == 1:
-            summary = self._llm_extract_summary(doc=docs[0])
-            return summary
-        else:
-            max_iteration = max_iteration if len(docs) > max_iteration else len(docs)
-            for doc in docs[0:max_iteration]:
-                chat_param = {
-                    "chat_session_id": uuid.uuid1(),
-                    "current_user_input": doc,
-                    "select_param": "summary",
-                    "model_name": self.model_name,
-                }
-                tasks.append(
-                    llm_chat_response_nostream(
-                        ChatScene.ExtractSummary.value(), **{"chat_param": chat_param}
-                    )
+            return self._llm_extract_summary(doc=docs[0])
+        max_iteration = min(len(docs), max_iteration)
+        tasks = []
+        for doc in docs[:max_iteration]:
+            chat_param = {
+                "chat_session_id": uuid.uuid1(),
+                "current_user_input": doc,
+                "select_param": "summary",
+                "model_name": self.model_name,
+            }
+            tasks.append(
+                llm_chat_response_nostream(
+                    ChatScene.ExtractSummary.value(), **{"chat_param": chat_param}
                 )
-            from pilot.common.chat_util import run_async_tasks
-
-            summary_iters = run_async_tasks(tasks)
-            from pilot.common.prompt_util import PromptHelper
-            from llama_index.prompts.default_prompt_selectors import (
-                DEFAULT_TREE_SUMMARIZE_PROMPT_SEL,
             )
+        from pilot.common.chat_util import run_async_tasks
 
-            prompt_helper = PromptHelper(context_window=2500)
-            summary_iters = prompt_helper.repack(
-                prompt=DEFAULT_TREE_SUMMARIZE_PROMPT_SEL, text_chunks=summary_iters
-            )
-            return self._mapreduce_extract_summary(summary_iters)
+        summary_iters = run_async_tasks(tasks)
+        from pilot.common.prompt_util import PromptHelper
+        from llama_index.prompts.default_prompt_selectors import (
+            DEFAULT_TREE_SUMMARIZE_PROMPT_SEL,
+        )
+
+        prompt_helper = PromptHelper(context_window=2500)
+        summary_iters = prompt_helper.repack(
+            prompt=DEFAULT_TREE_SUMMARIZE_PROMPT_SEL, text_chunks=summary_iters
+        )
+        return self._mapreduce_extract_summary(summary_iters)

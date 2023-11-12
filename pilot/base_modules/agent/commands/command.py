@@ -48,9 +48,9 @@ def execute_ai_response_json(
     arguments = _resolve_pathlike_command_args(arguments)
     # Execute command
     if command_name is not None and command_name.lower().startswith("error"):
-        result = f"Command {command_name} threw the following error: {arguments}"
+        return f"Command {command_name} threw the following error: {arguments}"
     elif command_name == "human_feedback":
-        result = f"Human feedback: {user_input}"
+        return f"Human feedback: {user_input}"
     else:
         for plugin in cfg.plugins:
             if not plugin.can_handle_pre_command():
@@ -61,8 +61,7 @@ def execute_ai_response_json(
             arguments,
             prompt,
         )
-        result = f"{command_result}"
-    return result
+        return f"{command_result}"
 
 
 def execute_command(
@@ -80,24 +79,18 @@ def execute_command(
         str: The result of the command
     """
 
-    cmd = plugin_generator.command_registry.commands.get(command_name)
-
-    # If the command is found, call it with the provided arguments
-    if cmd:
+    if cmd := plugin_generator.command_registry.commands.get(command_name):
         try:
             return cmd(**arguments)
         except Exception as e:
             raise ValueError(f"Error: {str(e)}")
             # return f"Error: {str(e)}"
-    # TODO: Change these to take in a file rather than pasted code, if
-    # non-file is given, return instructions "Input should be a python
-    # filepath, write your code to file and try again
     else:
         for command in plugin_generator.commands:
-            if (
-                command_name == command["label"].lower()
-                or command_name == command["name"].lower()
-            ):
+            if command_name in [
+                command["label"].lower(),
+                command["name"].lower(),
+            ]:
                 try:
                     # 删除非定义参数
                     diff_ags = list(
@@ -105,11 +98,11 @@ def execute_command(
                     )
                     for arg_name in diff_ags:
                         del arguments[arg_name]
-                    print(str(arguments))
+                    print(arguments)
                     return command["function"](**arguments)
                 except Exception as e:
                     return f"Error: {str(e)}"
-        raise NotCommands("非可用命令" + command_name)
+        raise NotCommands(f"非可用命令{command_name}")
 
 
 def get_command(response_json: Dict):

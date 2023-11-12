@@ -39,11 +39,11 @@ def data_pre_classification(df: DataFrame):
         if pd.api.types.is_numeric_dtype(df[column_name].dtypes):
             number_columns.append(column_name)
             unique_values = df[column_name].unique()
-            numeric_colums_value_map.update({column_name: len(unique_values)})
+            numeric_colums_value_map[column_name] = len(unique_values)
         else:
             non_numeric_colums.append(column_name)
             unique_values = df[column_name].unique()
-            non_numeric_colums_value_map.update({column_name: len(unique_values)})
+            non_numeric_colums_value_map[column_name] = len(unique_values)
 
     sorted_numeric_colums_value_map = dict(
         sorted(numeric_colums_value_map.items(), key=lambda x: x[1])
@@ -56,20 +56,18 @@ def data_pre_classification(df: DataFrame):
     non_numeric_colums_sort_list = list(sorted_colums_value_map.keys())
 
     #  Analyze x-coordinate
-    if len(non_numeric_colums_sort_list) > 0:
+    if non_numeric_colums_sort_list:
         x_cloumn = non_numeric_colums_sort_list[-1]
         non_numeric_colums_sort_list.remove(x_cloumn)
     else:
         x_cloumn = number_columns[0]
         numeric_colums_sort_list.remove(x_cloumn)
 
-    #  Analyze y-coordinate
-    if len(numeric_colums_sort_list) > 0:
-        y_column = numeric_colums_sort_list[0]
-        numeric_colums_sort_list.remove(y_column)
-    else:
+    if not numeric_colums_sort_list:
         raise ValueError("Not enough numeric columns for chart！")
 
+    y_column = numeric_colums_sort_list[0]
+    numeric_colums_sort_list.remove(y_column)
     return x_cloumn, y_column, non_numeric_colums_sort_list, numeric_colums_sort_list
 
     #
@@ -138,9 +136,11 @@ if __name__ == "__main__":
 
     # 判断列是否为数字列
     column_name = "A"  # 要判断的列名
-    is_numeric = pd.to_numeric(df[column_name], errors="coerce").notna().all()
-
-    if is_numeric:
+    if (
+        is_numeric := pd.to_numeric(df[column_name], errors="coerce")
+        .notna()
+        .all()
+    ):
         print(
             f"Column '{column_name}' is a numeric column (ignoring null and NaN values in some elements)."
         )
@@ -179,12 +179,11 @@ if __name__ == "__main__":
         "KaiTi",
     ]
     fm = FontManager()
-    mat_fonts = set(f.name for f in fm.ttflist)
-    can_use_fonts = []
-    for font_name in font_names:
-        if font_name in mat_fonts:
-            can_use_fonts.append(font_name)
-    if len(can_use_fonts) > 0:
+    mat_fonts = {f.name for f in fm.ttflist}
+    can_use_fonts = [
+        font_name for font_name in font_names if font_name in mat_fonts
+    ]
+    if can_use_fonts:
         plt.rcParams["font.sans-serif"] = can_use_fonts
 
     rc = {"font.sans-serif": can_use_fonts}
@@ -197,47 +196,20 @@ if __name__ == "__main__":
     sns.set(context="notebook", style="ticks", rc=rc)
 
     fig, ax = plt.subplots(figsize=(8, 5), dpi=100)
-    # plt.ticklabel_format(style='plain')
-    # ax = df.plot(kind='bar', ax=ax)
-    # sns.barplot(df, x=x, y="Total_Sales", hue='Country', ax=ax)
-    # sns.barplot(df, x=x, y="Total_Profit", hue='Country', ax=ax)
-
-    # sns.catplot(data=df, x=x, y=y, hue='Country',  kind='bar')
-    # x, y, non_num_columns, num_colmns = data_pre_classification(df)
-    # print(x, y, str(non_num_columns), str(num_colmns))
-    ## 复杂折线图实现
-    # if len(num_colmns) > 0:
-    #     num_colmns.append(y)
-    #     df_melted = pd.melt(
-    #         df, id_vars=x, value_vars=num_colmns, var_name="line", value_name="Value"
-    #     )
-    #     sns.lineplot(data=df_melted, x=x, y="Value", hue="line", ax=ax, palette="Set2")
-    # else:
-    #     sns.lineplot(data=df, x=x, y=y, ax=ax, palette="Set2")
-
-    hue = None
     ## 复杂柱状图实现
     x, y, non_num_columns, num_colmns = data_pre_classification(df)
 
-    if len(non_num_columns) >= 1:
-        hue = non_num_columns[0]
-
+    hue = non_num_columns[0] if len(non_num_columns) >= 1 else None
     if len(num_colmns) >= 1:
         if hue:
-            if len(num_colmns) >= 2:
-                can_use_columns = num_colmns[:2]
-            else:
-                can_use_columns = num_colmns
+            can_use_columns = num_colmns[:2] if len(num_colmns) >= 2 else num_colmns
             sns.barplot(data=df, x=x, y=y, hue=hue, palette="Set2", ax=ax)
             for sub_y_column in can_use_columns:
                 sns.barplot(
                     data=df, x=x, y=sub_y_column, hue=hue, palette="Set2", ax=ax
                 )
         else:
-            if len(num_colmns) > 5:
-                can_use_columns = num_colmns[:5]
-            else:
-                can_use_columns = num_colmns
+            can_use_columns = num_colmns[:5] if len(num_colmns) > 5 else num_colmns
             can_use_columns.append(y)
 
             df_melted = pd.melt(
@@ -264,7 +236,7 @@ if __name__ == "__main__":
     # 设置 y 轴刻度格式为普通数字格式
     ax.yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: "{:,.0f}".format(x)))
 
-    chart_name = "bar_" + str(uuid.uuid1()) + ".png"
+    chart_name = f"bar_{str(uuid.uuid1())}.png"
     chart_path = chart_name
     plt.savefig(chart_path, bbox_inches="tight", dpi=100)
 

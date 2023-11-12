@@ -54,14 +54,13 @@ class ChatAgent(BaseChat):
 
     @trace()
     async def generate_input_values(self) -> Dict[str, str]:
-        input_values = {
+        return {
             "user_goal": self.current_user_input,
             "expand_constraints": self.__list_to_prompt_str(
                 list(self.plugins_prompt_generator.constraints)
             ),
             "tool_list": self.plugins_prompt_generator.generate_commands_string(),
         }
-        return input_values
 
     def stream_plugin_call(self, text):
         text = text.replace("\n", " ")
